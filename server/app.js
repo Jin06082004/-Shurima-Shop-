@@ -7,12 +7,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Routes ───────────────────────────────────────────────────
-app.use("/api/user", require("./modules/user/user.route"));
+// app.use("/api/user", require("./modules/user/user.route"));
 app.use("/api/auth", require("./modules/auth/auth.route"));
-app.use("/api/review", require("./modules/review/review.route"));
-app.use("/api/payment", require("./modules/payment/payment.route"));
+// app.use("/api/review", require("./modules/review/review.route"));
+// app.use("/api/payment", require("./modules/payment/payment.route"));
 app.use("/api/products", require("./modules/product/product.route"));
 app.use("/api/variants", require("./modules/product/variant.route"));
+// app.use("/api/cart", require("./modules/cart/cart.route"));
+// app.use("/api/orders", require("./modules/order/order.route"));
+app.use("/api/categories", require("./modules/category/category.routes"));
+app.use("/api/brands", require("./modules/brand/brand.routes"));
 
 // ─── Health Check ─────────────────────────────────────────────
 app.get("/health", (req, res) => {
