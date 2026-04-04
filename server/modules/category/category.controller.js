@@ -1,12 +1,10 @@
 const mongoose = require("mongoose");
 
-const Category = require("./category.model");
-
-const normalizeName = (value) => value.trim().replace(/\s+/g, " ");
+const categoryService = require("./category.service");
 
 const getCategories = async (req, res) => {
 	try {
-		const categories = await Category.find().sort({ createdAt: -1 });
+		const categories = await categoryService.getCategories();
 
 		res.status(200).json({
 			message: "Categories fetched successfully",
@@ -25,7 +23,7 @@ const getCategoryById = async (req, res) => {
 			return res.status(400).json({ message: "Invalid category id" });
 		}
 
-		const category = await Category.findById(id);
+		const category = await categoryService.getCategoryById(id);
 
 		if (!category) {
 			return res.status(404).json({ message: "Category not found" });
@@ -44,27 +42,14 @@ const createCategory = async (req, res) => {
 	try {
 		const { name } = req.body;
 
-		if (typeof name !== "string" || !name.trim()) {
-			return res.status(400).json({ message: "Category name is required" });
-		}
-
-		const normalizedName = normalizeName(name);
-		const existingCategory = await Category.findOne({
-			name: { $regex: `^${normalizedName}$`, $options: "i" },
-		});
-
-		if (existingCategory) {
-			return res.status(409).json({ message: "Category already exists" });
-		}
-
-		const category = await Category.create({ name: normalizedName });
+		const category = await categoryService.createCategory(name);
 
 		res.status(201).json({
 			message: "Category created successfully",
 			data: category,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.status || 500).json({ message: error.message });
 	}
 };
 
@@ -77,25 +62,7 @@ const updateCategory = async (req, res) => {
 			return res.status(400).json({ message: "Invalid category id" });
 		}
 
-		if (typeof name !== "string" || !name.trim()) {
-			return res.status(400).json({ message: "Category name is required" });
-		}
-
-		const normalizedName = normalizeName(name);
-		const existingCategory = await Category.findOne({
-			_id: { $ne: id },
-			name: { $regex: `^${normalizedName}$`, $options: "i" },
-		});
-
-		if (existingCategory) {
-			return res.status(409).json({ message: "Category already exists" });
-		}
-
-		const category = await Category.findByIdAndUpdate(
-			id,
-			{ name: normalizedName },
-			{ new: true, runValidators: true }
-		);
+		const category = await categoryService.updateCategory(id, name);
 
 		if (!category) {
 			return res.status(404).json({ message: "Category not found" });
@@ -106,7 +73,7 @@ const updateCategory = async (req, res) => {
 			data: category,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.status || 500).json({ message: error.message });
 	}
 };
 
@@ -118,7 +85,7 @@ const deleteCategory = async (req, res) => {
 			return res.status(400).json({ message: "Invalid category id" });
 		}
 
-		const category = await Category.findByIdAndDelete(id);
+		const category = await categoryService.deleteCategory(id);
 
 		if (!category) {
 			return res.status(404).json({ message: "Category not found" });

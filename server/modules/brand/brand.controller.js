@@ -1,12 +1,10 @@
 const mongoose = require("mongoose");
 
-const Brand = require("./brand.modle");
-
-const normalizeName = (value) => value.trim().replace(/\s+/g, " ");
+const brandService = require("./brand.service");
 
 const getBrands = async (req, res) => {
 	try {
-		const brands = await Brand.find().sort({ createdAt: -1 });
+		const brands = await brandService.getBrands();
 
 		res.status(200).json({
 			message: "Brands fetched successfully",
@@ -25,7 +23,7 @@ const getBrandById = async (req, res) => {
 			return res.status(400).json({ message: "Invalid brand id" });
 		}
 
-		const brand = await Brand.findById(id);
+		const brand = await brandService.getBrandById(id);
 
 		if (!brand) {
 			return res.status(404).json({ message: "Brand not found" });
@@ -44,27 +42,14 @@ const createBrand = async (req, res) => {
 	try {
 		const { name } = req.body;
 
-		if (typeof name !== "string" || !name.trim()) {
-			return res.status(400).json({ message: "Brand name is required" });
-		}
-
-		const normalizedName = normalizeName(name);
-		const existingBrand = await Brand.findOne({
-			name: { $regex: `^${normalizedName}$`, $options: "i" },
-		});
-
-		if (existingBrand) {
-			return res.status(409).json({ message: "Brand already exists" });
-		}
-
-		const brand = await Brand.create({ name: normalizedName });
+		const brand = await brandService.createBrand(name);
 
 		res.status(201).json({
 			message: "Brand created successfully",
 			data: brand,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.status || 500).json({ message: error.message });
 	}
 };
 
@@ -77,25 +62,7 @@ const updateBrand = async (req, res) => {
 			return res.status(400).json({ message: "Invalid brand id" });
 		}
 
-		if (typeof name !== "string" || !name.trim()) {
-			return res.status(400).json({ message: "Brand name is required" });
-		}
-
-		const normalizedName = normalizeName(name);
-		const existingBrand = await Brand.findOne({
-			_id: { $ne: id },
-			name: { $regex: `^${normalizedName}$`, $options: "i" },
-		});
-
-		if (existingBrand) {
-			return res.status(409).json({ message: "Brand already exists" });
-		}
-
-		const brand = await Brand.findByIdAndUpdate(
-			id,
-			{ name: normalizedName },
-			{ new: true, runValidators: true }
-		);
+		const brand = await brandService.updateBrand(id, name);
 
 		if (!brand) {
 			return res.status(404).json({ message: "Brand not found" });
@@ -106,7 +73,7 @@ const updateBrand = async (req, res) => {
 			data: brand,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.status || 500).json({ message: error.message });
 	}
 };
 
@@ -118,7 +85,7 @@ const deleteBrand = async (req, res) => {
 			return res.status(400).json({ message: "Invalid brand id" });
 		}
 
-		const brand = await Brand.findByIdAndDelete(id);
+		const brand = await brandService.deleteBrand(id);
 
 		if (!brand) {
 			return res.status(404).json({ message: "Brand not found" });
