@@ -12,6 +12,13 @@ app.use("/api/products", require("./modules/product/product.route"));
 app.use("/api/brands", require("./modules/brand/brand.routes"));
 app.use("/api/variants", require("./modules/product/variant.route"));
 app.use("/api/categories", require("./modules/category/category.routes"));
+app.use("/api/orders", require("./modules/order/order.routes"));
+app.use("/api/order-items", require("./modules/order/orderItem.routes"));
+app.use("/api/carts", require("./modules/cart/cart.routes"));
+app.use("/api/cart-items", require("./modules/cart/cartItem.routes"));
+app.use("/api/users", require("./modules/user/user.route"));
+app.use("/api/reviews", require("./modules/review/review.route"));
+app.use("/api/payments", require("./modules/payment/payment.route"));
 
 app.get("/health", (req, res) => {
     res.status(200).json({
