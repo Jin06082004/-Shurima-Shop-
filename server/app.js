@@ -7,9 +7,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // ─── Routes ───────────────────────────────────────────────────
-const productRoutes = require('./modules/product/product.route');
-
-app.use('/api/products', productRoutes);
+app.use("/api/user", require("./modules/user/user.route"));
+app.use("/api/auth", require("./modules/auth/auth.route"));
+app.use("/api/review", require("./modules/review/review.route"));
+app.use("/api/payment", require("./modules/payment/payment.route"));
+app.use("/api/products", require("./modules/product/product.route"));
 
 // ─── Health Check ─────────────────────────────────────────────
 app.get("/health", (req, res) => {
@@ -33,4 +35,4 @@ app.use((err, req, res, next) => {
   });
 });
 
-module.exports = app;
+module.exports = app;
