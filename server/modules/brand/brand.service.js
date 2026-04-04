@@ -1,4 +1,4 @@
-const Brand = require("./brand.modle");
+const Brand = require('./brand.model');
 
 const normalizeName = (value) => value.trim().replace(/\s+/g, " ");
 
