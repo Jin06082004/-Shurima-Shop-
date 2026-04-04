@@ -6,15 +6,15 @@ const register = async (req, res) => {
     // Validate input strictly
     const { error, value } = registerSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: error.details[0].message,
         data: null
       });
     }
 
     const user = await authService.register(value);
-    
+
     return res.status(201).json({
       success: true,
       message: "User registered successfully",
@@ -34,8 +34,8 @@ const login = async (req, res) => {
     // Validate input strictly
     const { error, value } = loginSchema.validate(req.body);
     if (error) {
-      return res.status(400).json({ 
-        success: false, 
+      return res.status(400).json({
+        success: false,
         message: error.details[0].message,
         data: null
       });
