@@ -12,6 +12,7 @@ app.use("/api/auth", require("./modules/auth/auth.route"));
 app.use("/api/review", require("./modules/review/review.route"));
 app.use("/api/payment", require("./modules/payment/payment.route"));
 app.use("/api/products", require("./modules/product/product.route"));
+app.use("/api/variants", require("./modules/product/variant.route"));
 
 // ─── Health Check ─────────────────────────────────────────────
 app.get("/health", (req, res) => {

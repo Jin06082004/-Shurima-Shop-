@@ -1,4 +1,5 @@
 const Product = require('./product.model');
+const Variant = require('./variant.model'); // Import Variant to attach to product
 
 /**
  * Get all products with pagination, search, filter, and sorting.
@@ -16,24 +17,20 @@ const getAllProducts = async (query) => {
 
   const filter = { isActive: true };
 
-  // Search by name (case-insensitive)
   if (search) {
     filter.name = { $regex: search, $options: 'i' };
   }
 
-  // Filter by category
   if (category) {
     filter.category = category;
   }
 
-  // Filter by price range
   if (minPrice !== undefined || maxPrice !== undefined) {
     filter.price = {};
     if (minPrice !== undefined) filter.price.$gte = Number(minPrice);
     if (maxPrice !== undefined) filter.price.$lte = Number(maxPrice);
   }
 
-  // Sort options
   const sortOptions = {};
   if (sort === 'newest') {
     sortOptions.createdAt = -1;
@@ -60,6 +57,14 @@ const getAllProducts = async (query) => {
     Product.countDocuments(filter),
   ]);
 
+  // Attach variants to all products
+  const productIds = products.map((p) => p._id);
+  const variants = await Variant.find({ productId: { $in: productIds } }).lean();
+  
+  for (const product of products) {
+    product.variants = variants.filter((v) => v.productId.toString() === product._id.toString());
+  }
+
   return {
     products,
     pagination: {
@@ -85,6 +90,9 @@ const getProductById = async (id) => {
     error.statusCode = 404;
     throw error;
   }
+  
+  // Attach single product variants
+  product.variants = await Variant.find({ productId: product._id }).lean();
 
   return product;
 };
@@ -136,6 +144,8 @@ const deleteProduct = async (id) => {
     error.statusCode = 404;
     throw error;
   }
+
+  // Optional: Also soft delete variants here if required.
 
   return { message: 'Product deleted successfully' };
 };
