@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 
-// 🔥 thêm 2 dòng này
 require('../brand/brand.model');
 require('../category/category.model');
 
