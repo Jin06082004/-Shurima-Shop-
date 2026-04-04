@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 
 const userSchema = new mongoose.Schema({
-    auth: { type: mongoose.Schema.Types.ObjectId, ref: 'Auth' },
-    name: String,
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+    role: { type: String, enum: ['user', 'admin'], default: 'user' },
     phone: String,
     address: String,
 }, { timestamps: true });

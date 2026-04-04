@@ -1,4 +1,4 @@
-const Auth = require('./auth.model');
+const User = require('../user/user.model');
 const bcrypt = require('bcryptjs'); // Updated to use bcryptjs
 const jwt = require('jsonwebtoken');
 
@@ -6,7 +6,7 @@ const register = async (userData) => {
   const { name, email, password } = userData;
 
   // Check duplicate email
-  const existingUser = await Auth.findOne({ email });
+  const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new Error('Email already exists');
   }
@@ -16,7 +16,7 @@ const register = async (userData) => {
   const hashedPassword = await bcrypt.hash(password, salt);
 
   // Create user
-  const newUser = await Auth.create({
+  const newUser = await User.create({
     name,
     email,
     password: hashedPassword,
@@ -32,7 +32,7 @@ const register = async (userData) => {
 
 const login = async (email, password) => {
   // Validate email & password
-  const user = await Auth.findOne({ email });
+  const user = await User.findOne({ email });
   if (!user) {
     throw new Error('Invalid email or password');
   }
@@ -45,7 +45,7 @@ const login = async (email, password) => {
 
   // Include user id + role in token
   const payload = {
-    id: user._id,
+    userId: user._id,
     role: user.role
   };
 
