@@ -1,6 +1,13 @@
 const express = require("express");
+const cors = require("cors");
 
 const app = express();
+
+// ─── CORS ─────────────────────────────────────────────────────────
+app.use(cors({
+  origin: ["http://localhost:5173", "http://localhost:3000"],
+  credentials: true,
+}));
 
 // ─── Body Parsers ─────────────────────────────────────────────
 app.use(express.json());

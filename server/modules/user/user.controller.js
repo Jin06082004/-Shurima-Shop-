@@ -1,4 +1,3 @@
-const userService = require('./user.service');
 const { createUserSchema, updateUserSchema } = require('./user.validation');
 
 module.exports = {
@@ -61,6 +60,25 @@ module.exports = {
             const result = await userService.DeleteUser(req.params.id);
             if (!result) return res.status(404).json({ success: false, message: 'User not found' });
             res.status(200).json({ success: true, message: 'User deleted successfully' });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // PUT /user/profile
+    updateProfile: async (req, res) => {
+        try {
+            const { error } = updateUserSchema.validate(req.body);
+            if (error) return res.status(400).json({ success: false, message: error.details[0].message });
+            
+            // req.user is set by verifyToken middleware (using req.user.id)
+            const updatedUser = await userService.UpdateUser(req.user.id, req.body);
+            if (!updatedUser) return res.status(404).json({ success: false, message: 'User not found' });
+            
+            // Return updated user object without password
+            const result = updatedUser.toObject();
+            delete result.password;
+            res.status(200).json({ success: true, data: result, token: req.headers.authorization.split(' ')[1] });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

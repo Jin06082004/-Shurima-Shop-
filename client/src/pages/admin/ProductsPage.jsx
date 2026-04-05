@@ -1,0 +1,294 @@
+import { useState, useEffect, useCallback } from 'react'
+import { Plus, Edit, Trash2, AlertCircle, RefreshCw } from 'lucide-react'
+import { Button } from '../../components/ui/button'
+import { Input } from '../../components/ui/input'
+import { Badge } from '../../components/ui/badge'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/ui/table'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '../../components/ui/dialog'
+import { Label } from '../../components/ui/label'
+import {
+  getAllProducts,
+  createProduct,
+  deleteProduct,
+} from '../../services/product.service'
+import { getAllCategories } from '../../services/common.service'
+
+export default function ProductsPage() {
+  const [products, setProducts] = useState([])
+  const [categories, setCategories] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [toast, setToast] = useState(null)
+
+  // Form state
+  const [form, setForm] = useState({
+    name: '', price: '', stock: '', category: '', description: '', images: ''
+  })
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const fetchProducts = useCallback(async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await getAllProducts({ limit: 50 })
+      setProducts(data.data || [])
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể tải danh sách sản phẩm.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchProducts()
+    // Fetch categories for dropdown
+    getAllCategories()
+      .then((res) => setCategories(res.data || []))
+      .catch(() => {})
+  }, [fetchProducts])
+
+  const handleSave = async (e) => {
+    e.preventDefault()
+    setIsSaving(true)
+    try {
+      await createProduct({
+        name: form.name,
+        price: Number(form.price),
+        stock: Number(form.stock),
+        category: form.category || undefined,
+        description: form.description,
+        images: form.images ? [form.images] : undefined,
+      })
+      showToast('Thêm sản phẩm thành công!')
+      setIsModalOpen(false)
+      setForm({ name: '', price: '', stock: '', category: '', description: '', images: '' })
+      fetchProducts()
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Lỗi khi thêm sản phẩm!', 'error')
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (!confirm('Bạn có chắc muốn xóa sản phẩm này?')) return
+    try {
+      await deleteProduct(id)
+      showToast('Đã xóa sản phẩm!')
+      fetchProducts()
+    } catch (err) {
+      showToast('Không thể xóa sản phẩm!', 'error')
+    }
+  }
+
+  return (
+    <div className="space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100 relative">
+      {/* Toast notification */}
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'error' ? 'bg-destructive' : 'bg-green-500'}`}>
+          {toast.message}
+        </div>
+      )}
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-800">Sản phẩm</h2>
+          <p className="text-sm text-slate-500">Quản lý danh sách sản phẩm của bạn.</p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="icon" onClick={fetchProducts} title="Làm mới">
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
+                <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[425px]">
+              <DialogHeader>
+                <DialogTitle>Thêm sản phẩm mới</DialogTitle>
+              </DialogHeader>
+              <form onSubmit={handleSave} className="space-y-4 pt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Tên sản phẩm *</Label>
+                  <Input
+                    id="name"
+                    placeholder="VD: Áo thun form rộng..."
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="price">Giá bán (đ) *</Label>
+                    <Input
+                      id="price"
+                      type="number"
+                      placeholder="0"
+                      value={form.price}
+                      onChange={(e) => setForm({ ...form, price: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="stock">Tồn kho *</Label>
+                    <Input
+                      id="stock"
+                      type="number"
+                      placeholder="0"
+                      value={form.stock}
+                      onChange={(e) => setForm({ ...form, stock: e.target.value })}
+                      required
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="category">Danh mục</Label>
+                  <select
+                    id="category"
+                    value={form.category}
+                    onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                  >
+                    <option value="">-- Chọn danh mục --</option>
+                    {categories.map((cat) => (
+                      <option key={cat._id} value={cat._id}>{cat.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="images">URL Hình ảnh</Label>
+                  <Input
+                    id="images"
+                    placeholder="Nhập đường dẫn hình ảnh (https://...)"
+                    value={form.images}
+                    onChange={(e) => setForm({ ...form, images: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="description">Mô tả</Label>
+                  <Input
+                    id="description"
+                    placeholder="Mô tả ngắn về sản phẩm..."
+                    value={form.description}
+                    onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  />
+                </div>
+                <div className="pt-4 flex justify-end gap-2">
+                  <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+                  <Button type="submit" disabled={isSaving}>
+                    {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                  </Button>
+                </div>
+              </form>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center items-center py-16">
+          <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-primary"></div>
+          <span className="ml-3 text-slate-500">Đang tải sản phẩm...</span>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && !isLoading && (
+        <div className="flex items-center gap-2 p-4 rounded-md bg-destructive/10 text-destructive">
+          <AlertCircle className="h-5 w-5 flex-shrink-0" />
+          <span>{error}</span>
+          <Button variant="outline" size="sm" onClick={fetchProducts} className="ml-auto">
+            Thử lại
+          </Button>
+        </div>
+      )}
+
+      {/* Product Table */}
+      {!isLoading && !error && (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader className="bg-slate-50/50">
+              <TableRow>
+                <TableHead>Tên sản phẩm</TableHead>
+                <TableHead>Giá</TableHead>
+                <TableHead>Tồn kho</TableHead>
+                <TableHead>Trạng thái</TableHead>
+                <TableHead className="text-right">Hành động</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-10 text-slate-400">
+                    Chưa có sản phẩm nào. Hãy thêm sản phẩm đầu tiên!
+                  </TableCell>
+                </TableRow>
+              ) : (
+                products.map((product) => (
+                  <TableRow key={product._id}>
+                    <TableCell className="font-medium">
+                      {product.name}
+                      <div className="text-xs text-muted-foreground mt-0.5">{product._id?.slice(-8)}</div>
+                    </TableCell>
+                    <TableCell className="font-medium">
+                      {product.price?.toLocaleString('vi-VN')}đ
+                    </TableCell>
+                    <TableCell>{product.stock ?? '—'}</TableCell>
+                    <TableCell>
+                      <Badge
+                        className={product.stock > 0
+                          ? 'bg-primary/10 text-primary border-primary/20'
+                          : 'bg-destructive/10 text-destructive border-destructive/20'
+                        }
+                        variant="outline"
+                      >
+                        {product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-primary">
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-500 hover:text-destructive"
+                        onClick={() => handleDelete(product._id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+    </div>
+  )
+}
