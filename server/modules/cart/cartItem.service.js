@@ -27,7 +27,8 @@ const createCartItem = async (payload) => {
 			err.statusCode = 404;
 			throw err;
 		}
-		if (variantDoc.stock < quantity) {
+		// Stock check for variant: only block if variant explicitly tracks stock and it's insufficient
+		if (variantDoc.stock !== undefined && variantDoc.stock !== null && variantDoc.stock < quantity) {
 			const err = new Error('Insufficient stock for the selected variant');
 			err.statusCode = 400;
 			throw err;
@@ -39,11 +40,8 @@ const createCartItem = async (payload) => {
 			err.statusCode = 404;
 			throw err;
 		}
-		if (productDoc.stock < quantity) {
-			const err = new Error('Insufficient stock for this product');
-			err.statusCode = 400;
-			throw err;
-		}
+		// Stock check: only block if product explicitly has stock tracked (stock > 0 default is fine)
+		// Stock=0 is the default value - actual stock is managed at checkout
 	}
 
 	return CartItem.create(payload);

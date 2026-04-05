@@ -3,11 +3,9 @@ const Joi = require("joi");
 const objectIdRule = Joi.string().trim().length(24).hex();
 
 const createCartSchema = Joi.object({
-	user: objectIdRule.required().messages({
-		"string.empty": "User is required",
+	user: objectIdRule.messages({
 		"string.length": "User must be a valid id",
 		"string.hex": "User must be a valid id",
-		"any.required": "User is required",
 	}),
 	status: Joi.string().valid("active", "checked_out", "abandoned").default("active"),
 });

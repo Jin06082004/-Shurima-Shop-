@@ -9,7 +9,15 @@ const Variant = require("../product/variant.model");
 const recalcOrderTotal = async (orderId) => {
 	const items = await OrderItem.find({ order: orderId });
 	const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-	await Order.findByIdAndUpdate(orderId, { totalPrice: Math.round(total * 100) / 100 });
+	const roundedTotal = Math.round(total * 100) / 100;
+	const order = await Order.findById(orderId).select('discountAmount');
+	const discountAmount = Number(order?.discountAmount || 0);
+	const finalPrice = Math.max(0, roundedTotal - discountAmount);
+
+	await Order.findByIdAndUpdate(orderId, {
+		totalPrice: roundedTotal,
+		finalPrice: Math.round(finalPrice * 100) / 100,
+	});
 };
 
 const getOrderItems = async () => {
@@ -30,6 +38,7 @@ const getOrderItemById = async (id) => {
 const createOrderItem = async (payload) => {
 	const { order, product, variant, quantity } = payload;
 	let price;
+	let selectedVariant = variant || null;
 
 	if (variant) {
 		const variantDoc = await Variant.findById(variant);
@@ -58,29 +67,55 @@ const createOrderItem = async (payload) => {
 			err.statusCode = 404;
 			throw err;
 		}
-		if (productDoc.stock < quantity) {
-			const err = new Error('Insufficient stock for this product');
-			err.statusCode = 400;
-			throw err;
+
+		if (productDoc.stock >= quantity) {
+			price = productDoc.price;
+			await Product.findByIdAndUpdate(product, { $inc: { stock: -quantity } });
+		} else {
+			// Fallback for variant-managed stock products when top-level product stock is low.
+			const fallbackVariant = await Variant.findOne({
+				productId: product,
+				stock: { $gte: quantity },
+			}).sort({ stock: -1 });
+
+			if (!fallbackVariant) {
+				const err = new Error('Insufficient stock for this product');
+				err.statusCode = 400;
+				throw err;
+			}
+
+			selectedVariant = fallbackVariant._id;
+			price = fallbackVariant.price != null ? fallbackVariant.price : productDoc.price;
+			await Variant.findByIdAndUpdate(fallbackVariant._id, { $inc: { stock: -quantity } });
 		}
-		price = productDoc.price;
-		await Product.findByIdAndUpdate(product, { $inc: { stock: -quantity } });
 	}
 
-	const item = await OrderItem.create({ order, product, variant, quantity, price });
+	const item = await OrderItem.create({ order, product, variant: selectedVariant, quantity, price });
 	await recalcOrderTotal(order);
 	return item;
 };
 
 const updateOrderItem = async (id, payload) => {
-	return OrderItem.findByIdAndUpdate(id, payload, {
+	const item = await OrderItem.findByIdAndUpdate(id, payload, {
 		new: true,
 		runValidators: true,
 	});
+
+	if (item) {
+		await recalcOrderTotal(item.order);
+	}
+
+	return item;
 };
 
 const deleteOrderItem = async (id) => {
-	return OrderItem.findByIdAndDelete(id);
+	const item = await OrderItem.findByIdAndDelete(id);
+
+	if (item) {
+		await recalcOrderTotal(item.order);
+	}
+
+	return item;
 };
 
 module.exports = {

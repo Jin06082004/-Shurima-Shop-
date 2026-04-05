@@ -8,7 +8,8 @@ module.exports = {
             const { error } = createReviewSchema.validate(req.body);
             if (error) return res.status(400).json({ status: 'error', message: error.details[0].message });
 
-            const { userId, productId, rating, comment } = req.body;
+            const { productId, rating, comment } = req.body;
+            const userId = req.user.role === 'admin' && req.body.userId ? req.body.userId : req.user.id;
             const newReview = await reviewService.CreateReview(userId, productId, rating, comment);
             res.status(201).json({ status: 'success', data: newReview });
         } catch (error) {
@@ -50,6 +51,10 @@ module.exports = {
     // GET /review/user/:userId
     getByUser: async (req, res) => {
         try {
+            if (req.user.role !== 'admin' && String(req.params.userId) !== String(req.user.id)) {
+                return res.status(403).json({ status: 'error', message: 'You are not allowed to access these reviews' });
+            }
+
             const reviews = await reviewService.GetReviewsByUser(req.params.userId);
             res.status(200).json({ status: 'success', data: reviews });
         } catch (error) {
@@ -63,8 +68,14 @@ module.exports = {
             const { error } = updateReviewSchema.validate(req.body);
             if (error) return res.status(400).json({ status: 'error', message: error.details[0].message });
 
+            const review = await reviewService.GetReviewById(req.params.id);
+            if (!review) return res.status(404).json({ status: 'error', message: 'Review not found' });
+
+            if (req.user.role !== 'admin' && String(review.user?._id || review.user) !== String(req.user.id)) {
+                return res.status(403).json({ status: 'error', message: 'You are not allowed to update this review' });
+            }
+
             const updatedReview = await reviewService.UpdateReview(req.params.id, req.body);
-            if (!updatedReview) return res.status(404).json({ status: 'error', message: 'Review not found' });
             res.status(200).json({ status: 'success', data: updatedReview });
         } catch (error) {
             res.status(500).json({ status: 'error', message: error.message });
@@ -74,8 +85,14 @@ module.exports = {
     // DELETE /review/:id
     delete: async (req, res) => {
         try {
+            const review = await reviewService.GetReviewById(req.params.id);
+            if (!review) return res.status(404).json({ status: 'error', message: 'Review not found' });
+
+            if (req.user.role !== 'admin' && String(review.user?._id || review.user) !== String(req.user.id)) {
+                return res.status(403).json({ status: 'error', message: 'You are not allowed to delete this review' });
+            }
+
             const result = await reviewService.DeleteReview(req.params.id);
-            if (!result) return res.status(404).json({ status: 'error', message: 'Review not found' });
             res.status(200).json({ status: 'success', message: 'Review deleted successfully' });
         } catch (error) {
             res.status(500).json({ status: 'error', message: error.message });

@@ -39,9 +39,9 @@ const getCategoryById = async (req, res) => {
 
 const createCategory = async (req, res) => {
 	try {
-		const { name } = req.body;
+		const { name, description } = req.body;
 
-		const category = await categoryService.createCategory(name);
+		const category = await categoryService.createCategory({ name, description });
 
 		res.status(201).json({
 			message: "Category created successfully",
@@ -55,13 +55,13 @@ const createCategory = async (req, res) => {
 const updateCategory = async (req, res) => {
 	try {
 		const { id } = req.params;
-		const { name } = req.body;
+		const { name, description } = req.body;
 
 		if (!mongoose.Types.ObjectId.isValid(id)) {
 			return res.status(400).json({ message: "Invalid category id" });
 		}
 
-		const category = await categoryService.updateCategory(id, name);
+		const category = await categoryService.updateCategory(id, { name, description });
 
 		if (!category) {
 			return res.status(404).json({ message: "Category not found" });

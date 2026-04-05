@@ -1,6 +1,30 @@
 const express = require("express");
+const cors = require("cors");
 
 const app = express();
+
+// ─── CORS ─────────────────────────────────────────────────────────
+const allowedOrigins = [
+    "http://localhost:3000",
+    /^http:\/\/localhost:(?:\d+)$/,
+    /^http:\/\/127\.0\.0\.1:(?:\d+)$/,
+];
+
+app.use(cors({
+    origin(origin, callback) {
+        // Allow non-browser tools like Postman/curl without Origin header.
+        if (!origin) return callback(null, true);
+
+        const isAllowed = allowedOrigins.some((rule) => {
+            if (typeof rule === "string") return rule === origin;
+            return rule.test(origin);
+        });
+
+        if (isAllowed) return callback(null, origin);
+        return callback(new Error("Not allowed by CORS"));
+    },
+    credentials: true,
+}));
 
 // ─── Body Parsers ─────────────────────────────────────────────
 app.use(express.json());
@@ -18,6 +42,7 @@ app.use("/api/carts", require("./modules/cart/cart.routes"));
 app.use("/api/cart-items", require("./modules/cart/cartItem.routes"));
 app.use("/api/users", require("./modules/user/user.route"));
 app.use("/api/reviews", require("./modules/review/review.route"));
+app.use("/api/discounts", require("./modules/discount/discount.routes"));
 app.use("/api/payments", require("./modules/payment/payment.route"));
 
 app.get("/health", (req, res) => {

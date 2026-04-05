@@ -1,5 +1,6 @@
 const Product = require('./product.model');
 const Variant = require('./variant.model'); // Import Variant to attach to product
+const Category = require('../category/category.model');
 
 /**
  * Get all products with pagination, search, filter, and sorting.
@@ -18,7 +19,16 @@ const getAllProducts = async (query) => {
   const filter = { isActive: true };
 
   if (search) {
-    filter.name = { $regex: search, $options: 'i' };
+    const escapedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const searchRegex = new RegExp(escapedSearch, 'i');
+    const matchedCategories = await Category.find({ name: searchRegex }).select('_id').lean();
+    const categoryIds = matchedCategories.map((category) => category._id);
+
+    filter.$or = [
+      { name: searchRegex },
+      { description: searchRegex },
+      ...(categoryIds.length ? [{ category: { $in: categoryIds } }] : []),
+    ];
   }
 
   if (category) {

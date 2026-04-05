@@ -4,7 +4,9 @@ const orderService = require("./order.service");
 
 const getOrders = async (req, res) => {
 	try {
-		const orders = await orderService.getOrders();
+		const orders = req.user.role === "admin"
+			? await orderService.getOrders()
+			: await orderService.getOrdersByUser(req.user.id);
 
 		res.status(200).json({
 			message: "Orders fetched successfully",
@@ -29,6 +31,10 @@ const getOrderById = async (req, res) => {
 			return res.status(404).json({ message: "Order not found" });
 		}
 
+		if (req.user.role !== "admin" && String(order.user?._id || order.user) !== String(req.user.id)) {
+			return res.status(403).json({ message: "You are not allowed to access this order" });
+		}
+
 		res.status(200).json({
 			message: "Order fetched successfully",
 			data: order,
@@ -40,7 +46,12 @@ const getOrderById = async (req, res) => {
 
 const createOrder = async (req, res) => {
 	try {
-		const order = await orderService.createOrder(req.body);
+		const payload = { ...req.body };
+		if (req.user.role !== "admin") {
+			payload.user = req.user.id;
+		}
+
+		const order = await orderService.createOrder(payload);
 
 		res.status(201).json({
 			message: "Order created successfully",

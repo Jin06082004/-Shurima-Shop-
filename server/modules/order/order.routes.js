@@ -17,7 +17,7 @@ const {
 
 const { verifyToken, isAdmin } = require("../../middlewares/auth.middleware");
 
-router.get("/", verifyToken, isAdmin, getOrders);
+router.get("/", verifyToken, getOrders);
 router.get("/:id", verifyToken, getOrderById);
 router.post("/", verifyToken, validateCreateOrderBody, createOrder);
 router.put("/:id", verifyToken, isAdmin, validateUpdateOrderBody, updateOrder);
