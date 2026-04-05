@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { ShoppingCart } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Card, CardContent } from '../../components/ui/card'
 import { Badge } from '../../components/ui/badge'
 import { getAllProducts } from '../../services/product.service'
+import { useCart } from '../../context/CartContext'
+import { useAuth } from '../../context/AuthContext'
 
 const CATEGORY_BG = [
   { title: 'Nam', img: 'https://images.unsplash.com/photo-1516257984-b1b4d707412e?w=500&q=80', cols: 'col-span-1 md:col-span-2' },
@@ -41,8 +44,18 @@ function ProductSkeleton() {
 }
 
 export default function Home() {
+  const navigate = useNavigate()
+  const cart = useCart()
+  const { user } = useAuth()
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
+  const [addingId, setAddingId] = useState(null)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type })
+    setTimeout(() => setToast(null), 2500)
+  }
 
   const getDisplayPrice = (product) => {
     if (typeof product.price === 'number') return product.price
@@ -59,8 +72,31 @@ export default function Home() {
       .finally(() => setIsLoading(false))
   }, [])
 
+  const handleAddToCart = async (product) => {
+    if (!user) {
+      navigate('/login')
+      return
+    }
+
+    try {
+      setAddingId(product._id)
+      await cart.addItem(product._id, 1)
+      showToast('Đã thêm sản phẩm vào giỏ hàng!')
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ!', 'error')
+    } finally {
+      setAddingId(null)
+    }
+  }
+
   return (
     <div className="flex flex-col min-h-screen">
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'error' ? 'bg-destructive' : 'bg-green-500'}`}>
+          {toast.msg}
+        </div>
+      )}
+
       {/* Hero Section */}
       <section className="relative overflow-hidden bg-primary/20 bg-gradient-to-tr from-primary/30 to-primary/5">
         <div className="container mx-auto px-4 h-[600px] flex items-center pt-8">
@@ -148,9 +184,13 @@ export default function Home() {
                             <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground">Giảm giá</Badge>
                           )}
                           <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                            <Button className="w-[80%] rounded-full shadow-md bg-white text-foreground hover:bg-primary hover:text-primary-foreground transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                            <Button
+                              className="w-[80%] rounded-full shadow-md bg-white text-foreground hover:bg-primary hover:text-primary-foreground transform translate-y-4 group-hover:translate-y-0 transition-all duration-300"
+                              onClick={() => handleAddToCart(product)}
+                              disabled={addingId === product._id}
+                            >
                               <ShoppingCart className="w-4 h-4 mr-2" />
-                              Thêm vào giỏ
+                              {addingId === product._id ? 'Đang thêm...' : 'Thêm vào giỏ'}
                             </Button>
                           </div>
                         </div>

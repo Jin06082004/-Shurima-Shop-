@@ -120,7 +120,7 @@ module.exports = {
             }
         }
 
-        const amount = Number(order.totalPrice || 0);
+        const amount = Number(order.finalPrice ?? order.totalPrice ?? 0);
         if (amount <= 0) {
             const err = new Error('Order total must be greater than 0 to pay with MoMo');
             err.statusCode = 400;

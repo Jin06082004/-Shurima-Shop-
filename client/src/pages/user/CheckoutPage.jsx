@@ -10,6 +10,7 @@ import { Label } from '../../components/ui/label'
 import { useCart } from '../../context/CartContext'
 import { useAuth } from '../../context/AuthContext'
 import apiClient from '../../lib/apiClient'
+import { checkDiscountByCode, applyDiscountToOrder } from '../../services/discount.service'
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=120&q=70'
 
@@ -33,6 +34,9 @@ export default function CheckoutPage() {
   })
   const [paymentMethod, setPaymentMethod] = useState('cod')
   const [isLoading, setIsLoading] = useState(false)
+  const [discountCode, setDiscountCode] = useState('')
+  const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
+  const [discountPreview, setDiscountPreview] = useState(null)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(false)
 
@@ -59,6 +63,25 @@ export default function CheckoutPage() {
 
   const handleChange = (e) => setForm({ ...form, [e.target.id]: e.target.value })
 
+  const handleApplyDiscount = async () => {
+    setError(null)
+    if (!discountCode.trim()) {
+      setError('Vui lòng nhập mã giảm giá.')
+      return
+    }
+
+    try {
+      setIsApplyingDiscount(true)
+      const res = await checkDiscountByCode(discountCode.trim(), totalPrice)
+      setDiscountPreview(res.data)
+    } catch (err) {
+      setDiscountPreview(null)
+      setError(err.response?.data?.message || 'Mã giảm giá không hợp lệ.')
+    } finally {
+      setIsApplyingDiscount(false)
+    }
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -81,13 +104,19 @@ export default function CheckoutPage() {
         throw new Error('Không thể tạo đơn hàng')
       }
 
-      // Tạo order items để backend tính totalPrice từ dữ liệu thực tế
-      await Promise.all(items.map((item) => apiClient.post('/order-items', {
-        order: orderId,
-        product: typeof item.product === 'object' ? item.product?._id : item.product,
-        variant: item.variant ? (typeof item.variant === 'object' ? item.variant?._id : item.variant) : null,
-        quantity: item.quantity,
-      })))
+      // Tạo order items tuần tự để dừng ngay khi gặp lỗi stock/validation.
+      for (const item of items) {
+        await apiClient.post('/order-items', {
+          order: orderId,
+          product: typeof item.product === 'object' ? item.product?._id : item.product,
+          variant: item.variant ? (typeof item.variant === 'object' ? item.variant?._id : item.variant) : null,
+          quantity: item.quantity,
+        })
+      }
+
+      if (discountPreview?.discount?.code) {
+        await applyDiscountToOrder(orderId, discountPreview.discount.code)
+      }
 
       // Tạo payment theo phương thức user chọn
       if (paymentMethod === 'momo') {
@@ -113,6 +142,9 @@ export default function CheckoutPage() {
 
       setSuccess(true)
     } catch (err) {
+      if (err.response?.status === 400) {
+        await fetchCart()
+      }
       setError(err.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại!')
     } finally {
       setIsLoading(false)
@@ -144,7 +176,8 @@ export default function CheckoutPage() {
   }
 
   const shippingFee = 0
-  const finalTotal = totalPrice + shippingFee
+  const discountAmount = Number(discountPreview?.discountAmount || 0)
+  const finalTotal = Math.max(0, totalPrice + shippingFee - discountAmount)
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -260,6 +293,25 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-3">
+              <h2 className="text-lg font-bold">Mã giảm giá</h2>
+              <div className="flex gap-2">
+                <Input
+                  value={discountCode}
+                  onChange={(e) => setDiscountCode(e.target.value.toUpperCase())}
+                  placeholder="Nhập mã giảm giá (VD: SALE10)"
+                />
+                <Button type="button" variant="outline" onClick={handleApplyDiscount} disabled={isApplyingDiscount}>
+                  {isApplyingDiscount ? 'Đang áp...' : 'Áp dụng'}
+                </Button>
+              </div>
+              {discountPreview && (
+                <p className="text-sm text-green-600">
+                  Đã áp dụng mã {discountPreview.discount?.code}: giảm {Number(discountPreview.discountAmount || 0).toLocaleString('vi-VN')}đ
+                </p>
+              )}
+            </div>
+
             {error && (
               <div className="flex items-center gap-2 p-4 rounded-xl bg-destructive/10 text-destructive text-sm">
                 <AlertCircle className="h-5 w-5 flex-shrink-0" />
@@ -306,6 +358,10 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-muted-foreground">
                   <span>Phí vận chuyển</span>
                   <span className="text-green-600 font-medium">Miễn phí</span>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Giảm giá</span>
+                  <span className="text-green-600 font-medium">- {discountAmount.toLocaleString('vi-VN')}đ</span>
                 </div>
                 <div className="border-t pt-3 flex justify-between font-bold text-base">
                   <span>Tổng cộng</span>

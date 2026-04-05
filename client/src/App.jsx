@@ -24,6 +24,8 @@ import AdminProductsPage from './pages/admin/ProductsPage'
 import AdminOrdersPage from './pages/admin/OrdersPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
 import CustomersPage from './pages/admin/CustomersPage'
+import ReviewsPage from './pages/admin/ReviewsPage'
+import DiscountsPage from './pages/admin/DiscountsPage'
 import SettingsPage from './pages/admin/SettingsPage'
 
 function App() {
@@ -62,6 +64,8 @@ function App() {
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="customers" element={<CustomersPage />} />
+              <Route path="reviews" element={<ReviewsPage />} />
+              <Route path="discounts" element={<DiscountsPage />} />
               <Route path="settings" element={<SettingsPage />} />
             </Route>
           </Routes>

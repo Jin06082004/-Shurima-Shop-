@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Package, ShoppingCart, Users, FolderTree, Settings } from 'lucide-react'
+import { LayoutDashboard, Package, ShoppingCart, Users, FolderTree, MessageSquare, TicketPercent, Settings } from 'lucide-react'
 import { cn } from '../../lib/utils'
 
 const navItems = [
@@ -8,6 +8,8 @@ const navItems = [
   { href: '/admin/products', icon: Package, label: 'Sản phẩm' },
   { href: '/admin/orders', icon: ShoppingCart, label: 'Đơn hàng' },
   { href: '/admin/customers', icon: Users, label: 'Khách hàng' },
+  { href: '/admin/reviews', icon: MessageSquare, label: 'Đánh giá' },
+  { href: '/admin/discounts', icon: TicketPercent, label: 'Giảm giá' },
   { href: '/admin/settings', icon: Settings, label: 'Cài đặt' },
 ]
 

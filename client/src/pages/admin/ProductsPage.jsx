@@ -30,6 +30,13 @@ import { getAllCategories } from '../../services/common.service'
 export default function ProductsPage() {
   const [products, setProducts] = useState([])
   const [categories, setCategories] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalItems, setTotalItems] = useState(0)
+  const [searchText, setSearchText] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState('')
+  const [appliedSearch, setAppliedSearch] = useState('')
+  const [appliedCategory, setAppliedCategory] = useState('')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -47,26 +54,41 @@ export default function ProductsPage() {
     setTimeout(() => setToast(null), 3000)
   }
 
-  const fetchProducts = useCallback(async () => {
+  const fetchProducts = useCallback(async (page, options = {}) => {
+    const nextSearch = options.search ?? appliedSearch
+    const nextCategory = options.category ?? appliedCategory
     setIsLoading(true)
     setError(null)
     try {
-      const data = await getAllProducts({ limit: 50 })
+      const params = {
+        page,
+        limit: 10,
+      }
+      if (nextSearch?.trim()) params.search = nextSearch.trim()
+      if (nextCategory) params.category = nextCategory
+
+      const data = await getAllProducts(params)
       setProducts(data.data || [])
+      setCurrentPage(data.pagination?.page || page)
+      setTotalPages(data.pagination?.totalPages || 1)
+      setTotalItems(data.pagination?.total || 0)
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể tải danh sách sản phẩm.')
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [appliedSearch, appliedCategory])
 
   useEffect(() => {
-    fetchProducts()
+    fetchProducts(currentPage)
+  }, [fetchProducts, currentPage])
+
+  useEffect(() => {
     // Fetch categories for dropdown
     getAllCategories()
       .then((res) => setCategories(res.data || []))
       .catch(() => {})
-  }, [fetchProducts])
+  }, [])
 
   const handleSave = async (e) => {
     e.preventDefault()
@@ -92,7 +114,7 @@ export default function ProductsPage() {
       setIsModalOpen(false)
       setEditingProduct(null)
       setForm({ name: '', price: '', stock: '', category: '', description: '', images: '' })
-      fetchProducts()
+      fetchProducts(currentPage)
     } catch (err) {
       const fallback = editingProduct ? 'Lỗi khi cập nhật sản phẩm!' : 'Lỗi khi thêm sản phẩm!'
       showToast(err.response?.data?.message || fallback, 'error')
@@ -125,10 +147,58 @@ export default function ProductsPage() {
     try {
       await deleteProduct(id)
       showToast('Đã xóa sản phẩm!')
-      fetchProducts()
+      const isLastRowOnPage = products.length === 1
+      const targetPage = isLastRowOnPage && currentPage > 1 ? currentPage - 1 : currentPage
+      fetchProducts(targetPage)
     } catch (err) {
       showToast('Không thể xóa sản phẩm!', 'error')
     }
+  }
+
+  const handlePrevPage = () => {
+    if (currentPage > 1) {
+      fetchProducts(currentPage - 1)
+    }
+  }
+
+  const handleNextPage = () => {
+    if (currentPage < totalPages) {
+      fetchProducts(currentPage + 1)
+    }
+  }
+
+  const handleSearch = () => {
+    const normalizedSearch = searchText.trim()
+    setAppliedSearch(normalizedSearch)
+    setAppliedCategory(selectedCategory)
+    setCurrentPage(1)
+    fetchProducts(1, {
+      search: normalizedSearch,
+      category: selectedCategory,
+    })
+  }
+
+  const handleClearFilters = () => {
+    setSearchText('')
+    setSelectedCategory('')
+    setAppliedSearch('')
+    setAppliedCategory('')
+    setCurrentPage(1)
+    fetchProducts(1, { search: '', category: '' })
+  }
+
+  const renderPageNumbers = () => {
+    if (totalPages <= 1) return null
+
+    const pages = []
+    const start = Math.max(1, currentPage - 1)
+    const end = Math.min(totalPages, currentPage + 1)
+
+    for (let page = start; page <= end; page += 1) {
+      pages.push(page)
+    }
+
+    return pages
   }
 
   const getDisplayPrice = (product) => {
@@ -163,7 +233,7 @@ export default function ProductsPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={fetchProducts} title="Làm mới">
+          <Button variant="outline" size="icon" onClick={() => fetchProducts(currentPage)} title="Làm mới">
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
@@ -266,6 +336,34 @@ export default function ProductsPage() {
         </div>
       </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Input
+          placeholder="Tìm theo tên sản phẩm hoặc danh mục..."
+          value={searchText}
+          onChange={(e) => setSearchText(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleSearch()
+            }
+          }}
+        />
+        <select
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+        >
+          <option value="">Tất cả danh mục</option>
+          {categories.map((cat) => (
+            <option key={cat._id} value={cat._id}>{cat.name}</option>
+          ))}
+        </select>
+        <div className="flex items-center gap-2">
+          <Button type="button" onClick={handleSearch} className="flex-1">Tìm kiếm</Button>
+          <Button type="button" variant="outline" onClick={handleClearFilters}>Xóa lọc</Button>
+        </div>
+      </div>
+
       {/* Loading State */}
       {isLoading && (
         <div className="flex justify-center items-center py-16">
@@ -279,7 +377,7 @@ export default function ProductsPage() {
         <div className="flex items-center gap-2 p-4 rounded-md bg-destructive/10 text-destructive">
           <AlertCircle className="h-5 w-5 flex-shrink-0" />
           <span>{error}</span>
-          <Button variant="outline" size="sm" onClick={fetchProducts} className="ml-auto">
+          <Button variant="outline" size="sm" onClick={() => fetchProducts(currentPage)} className="ml-auto">
             Thử lại
           </Button>
         </div>
@@ -287,73 +385,113 @@ export default function ProductsPage() {
 
       {/* Product Table */}
       {!isLoading && !error && (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader className="bg-slate-50/50">
-              <TableRow>
-                <TableHead>Tên sản phẩm</TableHead>
-                <TableHead>Giá</TableHead>
-                <TableHead>Tồn kho</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="text-right">Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
+        <div className="space-y-4">
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader className="bg-slate-50/50">
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-10 text-slate-400">
-                    Chưa có sản phẩm nào. Hãy thêm sản phẩm đầu tiên!
-                  </TableCell>
+                  <TableHead>Tên sản phẩm</TableHead>
+                  <TableHead>Giá</TableHead>
+                  <TableHead>Tồn kho</TableHead>
+                  <TableHead>Trạng thái</TableHead>
+                  <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
-              ) : (
-                products.map((product) => {
-                  const displayPrice = getDisplayPrice(product)
-                  const displayStock = getDisplayStock(product)
-
-                  return (
-                  <TableRow key={product._id}>
-                    <TableCell className="font-medium">
-                      {product.name}
-                      <div className="text-xs text-muted-foreground mt-0.5">{product._id?.slice(-8)}</div>
-                    </TableCell>
-                    <TableCell className="font-medium">
-                      {displayPrice.toLocaleString('vi-VN')}đ
-                    </TableCell>
-                    <TableCell>{displayStock}</TableCell>
-                    <TableCell>
-                      <Badge
-                        className={displayStock > 0
-                          ? 'bg-primary/10 text-primary border-primary/20'
-                          : 'bg-destructive/10 text-destructive border-destructive/20'
-                        }
-                        variant="outline"
-                      >
-                        {displayStock > 0 ? 'Còn hàng' : 'Hết hàng'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-slate-500 hover:text-primary"
-                        onClick={() => handleEdit(product)}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-slate-500 hover:text-destructive"
-                        onClick={() => handleDelete(product._id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+              </TableHeader>
+              <TableBody>
+                {products.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-10 text-slate-400">
+                      Chưa có sản phẩm nào. Hãy thêm sản phẩm đầu tiên!
                     </TableCell>
                   </TableRow>
-                )})
-              )}
-            </TableBody>
-          </Table>
+                ) : (
+                  products.map((product) => {
+                    const displayPrice = getDisplayPrice(product)
+                    const displayStock = getDisplayStock(product)
+
+                    return (
+                    <TableRow key={product._id}>
+                      <TableCell className="font-medium">
+                        {product.name}
+                        <div className="text-xs text-muted-foreground mt-0.5">{product._id?.slice(-8)}</div>
+                      </TableCell>
+                      <TableCell className="font-medium">
+                        {displayPrice.toLocaleString('vi-VN')}đ
+                      </TableCell>
+                      <TableCell>{displayStock}</TableCell>
+                      <TableCell>
+                        <Badge
+                          className={displayStock > 0
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-destructive/10 text-destructive border-destructive/20'
+                          }
+                          variant="outline"
+                        >
+                          {displayStock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-slate-500 hover:text-primary"
+                          onClick={() => handleEdit(product)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-slate-500 hover:text-destructive"
+                          onClick={() => handleDelete(product._id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  )})
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              Trang {currentPage}/{Math.max(totalPages, 1)} · Tổng {totalItems} sản phẩm · 10 sản phẩm/trang
+            </p>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePrevPage}
+                disabled={currentPage <= 1 || isLoading}
+              >
+                Trước
+              </Button>
+
+              {renderPageNumbers()?.map((page) => (
+                <Button
+                  key={page}
+                  variant={page === currentPage ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => fetchProducts(page)}
+                  disabled={isLoading}
+                >
+                  {page}
+                </Button>
+              ))}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleNextPage}
+                disabled={currentPage >= totalPages || isLoading}
+              >
+                Sau
+              </Button>
+            </div>
+          </div>
         </div>
       )}
     </div>
