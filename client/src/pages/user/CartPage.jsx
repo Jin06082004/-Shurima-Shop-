@@ -221,7 +221,7 @@ export default function CartPage() {
                   <span>Thanh toán bảo mật SSL</span>
                 </div>
                 <div className="flex items-center justify-center gap-4 pt-1">
-                  {['💵 COD', '🏦 Ngân hàng', '💜 MoMo'].map(m => (
+                  {['💵 COD'].map(m => (
                     <span key={m} className="text-xs text-muted-foreground">{m}</span>
                   ))}
                 </div>

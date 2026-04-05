@@ -3,10 +3,6 @@ const router = express.Router();
 const paymentController = require('./payment.controller');
 const { verifyToken, isAdmin } = require('../../middlewares/auth.middleware');
 
-// MoMo callback must be public so provider can call it
-router.post('/momo/ipn', paymentController.momoIpn);
-router.post('/momo/create', verifyToken, paymentController.createMomoPayment);
-
 router.post('/', verifyToken, paymentController.create);
 router.get('/', verifyToken, isAdmin, paymentController.getAll);
 // Specific routes must come before /:id

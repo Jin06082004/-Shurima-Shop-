@@ -14,12 +14,6 @@ import { checkDiscountByCode, applyDiscountToOrder } from '../../services/discou
 
 const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=120&q=70'
 
-const PAYMENT_METHODS = [
-  { id: 'cod', label: 'Thanh toán khi nhận hàng (COD)', icon: '💵' },
-  { id: 'vnpay', label: 'VNPay / Chuyển khoản ngân hàng', icon: '🏦' },
-  { id: 'momo', label: 'Ví MoMo', icon: '💜' },
-]
-
 export default function CheckoutPage() {
   const { user } = useAuth()
   const { items, totalPrice, fetchCart } = useCart()
@@ -32,7 +26,6 @@ export default function CheckoutPage() {
     city: '',
     note: '',
   })
-  const [paymentMethod, setPaymentMethod] = useState('cod')
   const [isLoading, setIsLoading] = useState(false)
   const [discountCode, setDiscountCode] = useState('')
   const [isApplyingDiscount, setIsApplyingDiscount] = useState(false)
@@ -118,27 +111,14 @@ export default function CheckoutPage() {
         await applyDiscountToOrder(orderId, discountPreview.discount.code)
       }
 
-      // Tạo payment theo phương thức user chọn
-      if (paymentMethod === 'momo') {
-        const momoRes = await apiClient.post('/payments/momo/create', { orderId })
-        const payUrl = momoRes.data?.data?.payUrl
+      // COD-only payment flow
+      await apiClient.post('/payments', {
+        orderId,
+        method: 'cod',
+      })
 
-        await Promise.all(items.map((item) => apiClient.delete(`/cart-items/${item._id}`)))
-        await fetchCart()
-
-        if (payUrl) {
-          window.location.href = payUrl
-          return
-        }
-      } else {
-        await apiClient.post('/payments', {
-          orderId,
-          method: paymentMethod,
-        })
-
-        await Promise.all(items.map((item) => apiClient.delete(`/cart-items/${item._id}`)))
-        await fetchCart()
-      }
+      await Promise.all(items.map((item) => apiClient.delete(`/cart-items/${item._id}`)))
+      await fetchCart()
 
       setSuccess(true)
     } catch (err) {
@@ -263,34 +243,16 @@ export default function CheckoutPage() {
               <h2 className="text-lg font-bold mb-5 flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-primary" /> Phương thức thanh toán
               </h2>
-              <div className="space-y-3">
-                {PAYMENT_METHODS.map((method) => (
-                  <label
-                    key={method.id}
-                    className={`flex items-center gap-4 p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                      paymentMethod === method.id
-                        ? 'border-primary bg-primary/5'
-                        : 'border-gray-100 hover:border-gray-200'
-                    }`}
-                  >
-                    <input
-                      type="radio"
-                      name="payment"
-                      value={method.id}
-                      checked={paymentMethod === method.id}
-                      onChange={() => setPaymentMethod(method.id)}
-                      className="sr-only"
-                    />
-                    <span className="text-2xl">{method.icon}</span>
-                    <span className="font-medium text-sm">{method.label}</span>
-                    {paymentMethod === method.id && (
-                      <div className="ml-auto h-5 w-5 rounded-full bg-primary flex items-center justify-center">
-                        <CheckCircle className="h-3 w-3 text-primary-foreground" />
-                      </div>
-                    )}
-                  </label>
-                ))}
+              <div className="flex items-center gap-4 p-4 rounded-xl border-2 border-primary bg-primary/5">
+                <span className="text-2xl">💵</span>
+                <span className="font-medium text-sm">Thanh toán khi nhận hàng (COD)</span>
+                <div className="ml-auto h-5 w-5 rounded-full bg-primary flex items-center justify-center">
+                  <CheckCircle className="h-3 w-3 text-primary-foreground" />
+                </div>
               </div>
+              <p className="text-xs text-muted-foreground mt-3">
+                Hệ thống hiện chỉ hỗ trợ hình thức thanh toán COD.
+              </p>
             </div>
 
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 space-y-3">

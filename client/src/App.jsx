@@ -17,6 +17,7 @@ import CartPage from './pages/user/CartPage'
 import ProfilePage from './pages/user/ProfilePage'
 import OrdersPage from './pages/user/OrdersPage'
 import CheckoutPage from './pages/user/CheckoutPage'
+import CheckoutResultPage from './pages/user/CheckoutResultPage'
 
 // Admin Pages
 import DashboardOverview from './pages/admin/DashboardOverview'
@@ -24,6 +25,7 @@ import AdminProductsPage from './pages/admin/ProductsPage'
 import AdminOrdersPage from './pages/admin/OrdersPage'
 import CategoriesPage from './pages/admin/CategoriesPage'
 import CustomersPage from './pages/admin/CustomersPage'
+import PaymentsPage from './pages/admin/PaymentsPage'
 import ReviewsPage from './pages/admin/ReviewsPage'
 import DiscountsPage from './pages/admin/DiscountsPage'
 import SettingsPage from './pages/admin/SettingsPage'
@@ -45,6 +47,7 @@ function App() {
               <Route path="products/:id" element={<ProductDetailPage />} />
               <Route path="cart" element={<CartPage />} />
               <Route path="checkout" element={<CheckoutPage />} />
+              <Route path="checkout/result" element={<CheckoutResultPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="orders" element={<OrdersPage />} />
             </Route>
@@ -63,6 +66,7 @@ function App() {
               <Route path="products" element={<AdminProductsPage />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="payments" element={<PaymentsPage />} />
               <Route path="customers" element={<CustomersPage />} />
               <Route path="reviews" element={<ReviewsPage />} />
               <Route path="discounts" element={<DiscountsPage />} />
