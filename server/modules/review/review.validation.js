@@ -1,7 +1,7 @@
 const Joi = require('joi');
 
 const createReviewSchema = Joi.object({
-    userId: Joi.string().required(),
+    userId: Joi.string().optional(),
     productId: Joi.string().required(),
     rating: Joi.number().min(1).max(5).required(),
     comment: Joi.string().allow('').optional()

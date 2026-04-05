@@ -19,6 +19,14 @@ export default function CartPage() {
     setTimeout(() => setToast(null), 2500)
   }
 
+  const getItemPrice = (item) => {
+    const variantPrice = item.variant?.price
+    const productPrice = item.product?.price
+    if (typeof variantPrice === 'number') return variantPrice
+    if (typeof productPrice === 'number') return productPrice
+    return 0
+  }
+
   const handleUpdate = async (itemId, newQty) => {
     setUpdatingId(itemId)
     try {
@@ -104,7 +112,7 @@ export default function CartPage() {
           <div className="lg:col-span-2 space-y-4">
             {items.map((item) => {
               const product = item.product || {}
-              const price = product.price || 0
+              const price = getItemPrice(item)
               const itemTotal = price * (item.quantity || 1)
               const isUpdating = updatingId === item._id
 

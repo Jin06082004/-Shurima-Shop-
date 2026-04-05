@@ -5,6 +5,7 @@ const nameSchema = Joi.object({
 		"string.empty": "Category name is required",
 		"any.required": "Category name is required",
 	}),
+	description: Joi.string().trim().allow("").optional(),
 });
 
 const validate = (schema) => (req, res, next) => {

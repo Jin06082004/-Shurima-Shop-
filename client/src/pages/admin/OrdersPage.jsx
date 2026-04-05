@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Eye, AlertCircle, RefreshCw } from 'lucide-react'
+import { AlertCircle, RefreshCw, Trash2 } from 'lucide-react'
 import { Badge } from '../../components/ui/badge'
 import { Button } from '../../components/ui/button'
 import {
@@ -10,13 +10,12 @@ import {
   TableHeader,
   TableRow,
 } from '../../components/ui/table'
-import { getAllOrders, updateOrder } from '../../services/order.service'
+import { getAllOrders, updateOrder, deleteOrder } from '../../services/order.service'
 
 const STATUS_CONFIG = {
   pending:  { label: 'Chờ xử lý',  className: 'bg-amber-100 text-amber-800 border-amber-200' },
-  confirmed:{ label: 'Đã xác nhận',className: 'bg-blue-100 text-blue-800 border-blue-200' },
   shipping: { label: 'Đang giao',  className: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
-  done:     { label: 'Hoàn thành', className: 'bg-green-100 text-green-800 border-green-200' },
+  completed:{ label: 'Hoàn thành', className: 'bg-green-100 text-green-800 border-green-200' },
   cancelled:{ label: 'Đã hủy',     className: 'bg-red-100 text-red-800 border-red-200' },
 }
 
@@ -24,6 +23,12 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [toast, setToast] = useState(null)
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type })
+    setTimeout(() => setToast(null), 3000)
+  }
 
   const fetchOrders = useCallback(async () => {
     setIsLoading(true)
@@ -48,8 +53,20 @@ export default function OrdersPage() {
       setOrders((prev) =>
         prev.map((o) => (o._id === id ? { ...o, status: newStatus } : o))
       )
+      showToast('Cập nhật trạng thái thành công!')
     } catch {
-      alert('Không thể cập nhật trạng thái đơn hàng!')
+      showToast('Không thể cập nhật trạng thái đơn hàng!', 'error')
+    }
+  }
+
+  const handleDelete = async (orderId) => {
+    if (!confirm('Bạn có chắc muốn xóa đơn hàng này?')) return
+    try {
+      await deleteOrder(orderId)
+      showToast('Đã xóa đơn hàng!')
+      setOrders((prev) => prev.filter((o) => o._id !== orderId))
+    } catch {
+      showToast('Không thể xóa đơn hàng!', 'error')
     }
   }
 
@@ -60,6 +77,12 @@ export default function OrdersPage() {
 
   return (
     <div className="space-y-6 bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+      {toast && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium transition-all ${toast.type === 'error' ? 'bg-destructive' : 'bg-green-500'}`}>
+          {toast.message}
+        </div>
+      )}
+
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800">Đơn hàng</h2>
@@ -120,19 +143,31 @@ export default function OrdersPage() {
                       {new Date(order.createdAt).toLocaleDateString('vi-VN')}
                     </TableCell>
                     <TableCell className="font-medium">
-                      {order.totalAmount?.toLocaleString('vi-VN')}đ
+                      {(order.totalPrice || 0).toLocaleString('vi-VN')}đ
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-right">
-                      <select
-                        value={order.status}
-                        onChange={(e) => handleStatusChange(order._id, e.target.value)}
-                        className="text-xs border rounded px-2 py-1 text-muted-foreground bg-background cursor-pointer"
-                      >
-                        {Object.entries(STATUS_CONFIG).map(([key, { label }]) => (
-                          <option key={key} value={key}>{label}</option>
-                        ))}
-                      </select>
+                      <div className="inline-flex items-center gap-2">
+                        <select
+                          value={order.status}
+                          onChange={(e) => handleStatusChange(order._id, e.target.value)}
+                          className="text-xs border rounded px-2 py-1 text-muted-foreground bg-background cursor-pointer"
+                        >
+                          {Object.entries(STATUS_CONFIG).map(([key, { label }]) => (
+                            <option key={key} value={key}>{label}</option>
+                          ))}
+                        </select>
+
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-slate-500 hover:text-destructive"
+                          onClick={() => handleDelete(order._id)}
+                          title="Xóa đơn hàng"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

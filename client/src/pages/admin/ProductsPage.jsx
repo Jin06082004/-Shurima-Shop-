@@ -22,6 +22,7 @@ import { Label } from '../../components/ui/label'
 import {
   getAllProducts,
   createProduct,
+  updateProduct,
   deleteProduct,
 } from '../../services/product.service'
 import { getAllCategories } from '../../services/common.service'
@@ -32,6 +33,7 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingProduct, setEditingProduct] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState(null)
 
@@ -70,23 +72,52 @@ export default function ProductsPage() {
     e.preventDefault()
     setIsSaving(true)
     try {
-      await createProduct({
+      const payload = {
         name: form.name,
         price: Number(form.price),
         stock: Number(form.stock),
         category: form.category || undefined,
         description: form.description,
         images: form.images ? [form.images] : undefined,
-      })
-      showToast('Thêm sản phẩm thành công!')
+      }
+
+      if (editingProduct?._id) {
+        await updateProduct(editingProduct._id, payload)
+        showToast('Cập nhật sản phẩm thành công!')
+      } else {
+        await createProduct(payload)
+        showToast('Thêm sản phẩm thành công!')
+      }
+
       setIsModalOpen(false)
+      setEditingProduct(null)
       setForm({ name: '', price: '', stock: '', category: '', description: '', images: '' })
       fetchProducts()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Lỗi khi thêm sản phẩm!', 'error')
+      const fallback = editingProduct ? 'Lỗi khi cập nhật sản phẩm!' : 'Lỗi khi thêm sản phẩm!'
+      showToast(err.response?.data?.message || fallback, 'error')
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleEdit = (product) => {
+    setEditingProduct(product)
+    setForm({
+      name: product.name || '',
+      price: typeof product.price === 'number' ? String(product.price) : '',
+      stock: String(Number(product.stock || 0)),
+      category: product.category?._id || product.category || '',
+      description: product.description || '',
+      images: Array.isArray(product.images) && product.images.length > 0 ? product.images[0] : '',
+    })
+    setIsModalOpen(true)
+  }
+
+  const openCreateModal = () => {
+    setEditingProduct(null)
+    setForm({ name: '', price: '', stock: '', category: '', description: '', images: '' })
+    setIsModalOpen(true)
   }
 
   const handleDelete = async (id) => {
@@ -98,6 +129,22 @@ export default function ProductsPage() {
     } catch (err) {
       showToast('Không thể xóa sản phẩm!', 'error')
     }
+  }
+
+  const getDisplayPrice = (product) => {
+    if (typeof product.price === 'number') return product.price
+    const variantPrices = (product.variants || [])
+      .map((v) => v?.price)
+      .filter((val) => typeof val === 'number')
+    return variantPrices.length ? Math.min(...variantPrices) : 0
+  }
+
+  const getDisplayStock = (product) => {
+    const variantStocks = (product.variants || [])
+      .map((v) => Number(v?.stock || 0))
+      .reduce((sum, n) => sum + n, 0)
+    const productStock = Number(product.stock || 0)
+    return Math.max(productStock, variantStocks)
   }
 
   return (
@@ -120,14 +167,15 @@ export default function ProductsPage() {
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
-                <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
-              </Button>
+            <DialogTrigger
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-md hover:bg-primary/90"
+              onClick={openCreateModal}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Thêm sản phẩm
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Thêm sản phẩm mới</DialogTitle>
+                <DialogTitle>{editingProduct ? 'Cập nhật sản phẩm' : 'Thêm sản phẩm mới'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSave} className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -165,11 +213,12 @@ export default function ProductsPage() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Danh mục</Label>
+                  <Label htmlFor="category">Danh mục *</Label>
                   <select
                     id="category"
                     value={form.category}
                     onChange={(e) => setForm({ ...form, category: e.target.value })}
+                    required
                     className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                   >
                     <option value="">-- Chọn danh mục --</option>
@@ -197,9 +246,18 @@ export default function ProductsPage() {
                   />
                 </div>
                 <div className="pt-4 flex justify-end gap-2">
-                  <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false)
+                      setEditingProduct(null)
+                    }}
+                  >
+                    Hủy
+                  </Button>
                   <Button type="submit" disabled={isSaving}>
-                    {isSaving ? 'Đang lưu...' : 'Lưu sản phẩm'}
+                    {isSaving ? 'Đang lưu...' : editingProduct ? 'Lưu thay đổi' : 'Lưu sản phẩm'}
                   </Button>
                 </div>
               </form>
@@ -248,29 +306,38 @@ export default function ProductsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                products.map((product) => (
+                products.map((product) => {
+                  const displayPrice = getDisplayPrice(product)
+                  const displayStock = getDisplayStock(product)
+
+                  return (
                   <TableRow key={product._id}>
                     <TableCell className="font-medium">
                       {product.name}
                       <div className="text-xs text-muted-foreground mt-0.5">{product._id?.slice(-8)}</div>
                     </TableCell>
                     <TableCell className="font-medium">
-                      {product.price?.toLocaleString('vi-VN')}đ
+                      {displayPrice.toLocaleString('vi-VN')}đ
                     </TableCell>
-                    <TableCell>{product.stock ?? '—'}</TableCell>
+                    <TableCell>{displayStock}</TableCell>
                     <TableCell>
                       <Badge
-                        className={product.stock > 0
+                        className={displayStock > 0
                           ? 'bg-primary/10 text-primary border-primary/20'
                           : 'bg-destructive/10 text-destructive border-destructive/20'
                         }
                         variant="outline"
                       >
-                        {product.stock > 0 ? 'Còn hàng' : 'Hết hàng'}
+                        {displayStock > 0 ? 'Còn hàng' : 'Hết hàng'}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" className="text-slate-500 hover:text-primary">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-500 hover:text-primary"
+                        onClick={() => handleEdit(product)}
+                      >
                         <Edit className="h-4 w-4" />
                       </Button>
                       <Button
@@ -283,7 +350,7 @@ export default function ProductsPage() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))
+                )})
               )}
             </TableBody>
           </Table>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Trash2, AlertCircle, RefreshCw, FolderTree } from 'lucide-react'
+import { Plus, Edit, Trash2, AlertCircle, RefreshCw, FolderTree } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Input } from '../../components/ui/input'
 import {
@@ -18,13 +18,14 @@ import {
   DialogTrigger,
 } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
-import { getAllCategories, createCategory, deleteCategory } from '../../services/common.service'
+import { getAllCategories, createCategory, updateCategory, deleteCategory } from '../../services/common.service'
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [editingCategory, setEditingCategory] = useState(null)
   const [isSaving, setIsSaving] = useState(false)
   const [toast, setToast] = useState(null)
 
@@ -56,16 +57,39 @@ export default function CategoriesPage() {
     e.preventDefault()
     setIsSaving(true)
     try {
-      await createCategory(form)
-      showToast('Thêm danh mục thành công!')
+      const payload = { name: form.name.trim() }
+      if (editingCategory?._id) {
+        await updateCategory(editingCategory._id, payload)
+        showToast('Cập nhật danh mục thành công!')
+      } else {
+        await createCategory(payload)
+        showToast('Thêm danh mục thành công!')
+      }
       setIsModalOpen(false)
+      setEditingCategory(null)
       setForm({ name: '', description: '' })
       fetchCategories()
     } catch (err) {
-      showToast(err.response?.data?.message || 'Lỗi khi thêm danh mục!', 'error')
+      const fallback = editingCategory ? 'Lỗi khi cập nhật danh mục!' : 'Lỗi khi thêm danh mục!'
+      showToast(err.response?.data?.message || fallback, 'error')
     } finally {
       setIsSaving(false)
     }
+  }
+
+  const handleEdit = (category) => {
+    setEditingCategory(category)
+    setForm({
+      name: category.name || '',
+      description: category.description || '',
+    })
+    setIsModalOpen(true)
+  }
+
+  const openCreateModal = () => {
+    setEditingCategory(null)
+    setForm({ name: '', description: '' })
+    setIsModalOpen(true)
   }
 
   const handleDelete = async (id) => {
@@ -98,14 +122,15 @@ export default function CategoriesPage() {
             <RefreshCw className="h-4 w-4" />
           </Button>
           <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground hover:bg-primary/90 shadow-md">
-                <Plus className="mr-2 h-4 w-4" /> Thêm danh mục
-              </Button>
+            <DialogTrigger
+              className="inline-flex h-9 items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-md hover:bg-primary/90"
+              onClick={openCreateModal}
+            >
+              <Plus className="mr-2 h-4 w-4" /> Thêm danh mục
             </DialogTrigger>
             <DialogContent className="sm:max-w-[425px]">
               <DialogHeader>
-                <DialogTitle>Thêm danh mục mới</DialogTitle>
+                <DialogTitle>{editingCategory ? 'Cập nhật danh mục' : 'Thêm danh mục mới'}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSave} className="space-y-4 pt-4">
                 <div className="space-y-2">
@@ -128,9 +153,18 @@ export default function CategoriesPage() {
                   />
                 </div>
                 <div className="pt-4 flex justify-end gap-2">
-                  <Button variant="outline" type="button" onClick={() => setIsModalOpen(false)}>Hủy</Button>
+                  <Button
+                    variant="outline"
+                    type="button"
+                    onClick={() => {
+                      setIsModalOpen(false)
+                      setEditingCategory(null)
+                    }}
+                  >
+                    Hủy
+                  </Button>
                   <Button type="submit" disabled={isSaving}>
-                    {isSaving ? 'Đang lưu...' : 'Lưu danh mục'}
+                    {isSaving ? 'Đang lưu...' : editingCategory ? 'Lưu thay đổi' : 'Lưu danh mục'}
                   </Button>
                 </div>
               </form>
@@ -182,6 +216,14 @@ export default function CategoriesPage() {
                     <TableCell className="font-medium text-slate-800">{cat.name}</TableCell>
                     <TableCell className="text-muted-foreground">{cat.description || '—'}</TableCell>
                     <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-slate-500 hover:text-primary"
+                        onClick={() => handleEdit(cat)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"

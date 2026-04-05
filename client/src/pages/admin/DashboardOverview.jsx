@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/ca
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, BarChart, Bar } from 'recharts'
 import { getAllOrders } from '../../services/order.service'
 import { getAllProducts } from '../../services/product.service'
+import { getAllUsers } from '../../services/common.service'
 
 export default function DashboardOverview() {
   const [stats, setStats] = useState([
@@ -12,25 +13,72 @@ export default function DashboardOverview() {
     { title: 'Tổng sản phẩm', value: '...', icon: TrendingUp, trend: '', isUp: true },
     { title: 'User mới', value: '+3', icon: Users, trend: 'Đang cập nhật', isUp: true },
   ])
+  const [revenueData, setRevenueData] = useState([])
+  const [topProductsData, setTopProductsData] = useState([])
+
+  const buildRevenueByLast7Days = (orders) => {
+    const days = [...Array(7)].map((_, idx) => {
+      const d = new Date()
+      d.setDate(d.getDate() - (6 - idx))
+      const key = d.toISOString().slice(0, 10)
+      return { key, name: `T${d.getDate()}`, total: 0 }
+    })
+
+    const map = Object.fromEntries(days.map((d) => [d.key, d]))
+    orders.forEach((order) => {
+      const key = new Date(order.createdAt).toISOString().slice(0, 10)
+      if (map[key]) {
+        map[key].total += Number(order.totalPrice || 0)
+      }
+    })
+
+    return days.map((d) => ({ name: d.name, total: map[d.key].total }))
+  }
+
+  const buildTopProducts = (orders) => {
+    const salesMap = {}
+
+    orders.forEach((order) => {
+      ;(order.items || []).forEach((item) => {
+        const productId = item.product?._id || item.product
+        const productName = item.product?.name || 'Sản phẩm'
+        if (!productId) return
+
+        if (!salesMap[productId]) {
+          salesMap[productId] = { name: productName, sales: 0 }
+        }
+        salesMap[productId].sales += Number(item.quantity || 0)
+      })
+    })
+
+    return Object.values(salesMap)
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 5)
+  }
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [ordersRes, productsRes] = await Promise.all([
+        const [ordersRes, productsRes, usersRes] = await Promise.all([
           getAllOrders().catch(() => ({ data: [] })),
-          getAllProducts({ limit: 1000 }).catch(() => ({ data: [] }))
+          getAllProducts({ limit: 1000 }).catch(() => ({ data: [] })),
+          getAllUsers({ limit: 1000 }).catch(() => ({ data: [] }))
         ])
 
         const orders = ordersRes.data || []
         const products = productsRes.data || []
+        const users = usersRes.data || []
 
         const totalRevenue = orders.reduce((sum, order) => sum + (order.totalPrice || 0), 0)
+
+        setRevenueData(buildRevenueByLast7Days(orders))
+        setTopProductsData(buildTopProducts(orders))
 
         setStats([
           { title: 'Tổng Doanh thu', value: `${totalRevenue.toLocaleString('vi-VN')}đ`, icon: DollarSign, trend: 'Tất cả thời gian', isUp: true },
           { title: 'Số đơn hàng', value: orders.length.toString(), icon: ShoppingBag, trend: 'Tất cả đơn hàng', isUp: true },
           { title: 'Tổng sản phẩm', value: products.length.toString(), icon: TrendingUp, trend: 'Đang mở bán', isUp: true },
-          { title: 'User mới', value: '+35', icon: Users, trend: 'Theo tháng', isUp: true },
+          { title: 'Tổng users', value: users.length.toString(), icon: Users, trend: 'Từ database', isUp: true },
         ])
       } catch (err) {
         console.error('Error fetching stats', err)
@@ -38,24 +86,6 @@ export default function DashboardOverview() {
     }
     fetchData()
   }, [])
-
-  const revenueData = [
-    { name: 'T2', total: 4000000 },
-    { name: 'T3', total: 5500000 },
-    { name: 'T4', total: 3200000 },
-    { name: 'T5', total: 6800000 },
-    { name: 'T6', total: 8500000 },
-    { name: 'T7', total: 11000000 },
-    { name: 'CN', total: 12500000 },
-  ]
-
-  const topProductsData = [
-    { name: 'Áo thun tay lỡ', views: 400, sales: 240 },
-    { name: 'Quần jean ống rộng', views: 300, sales: 139 },
-    { name: 'Túi xách da nữ', views: 200, sales: 980 },
-    { name: 'Giày sneaker', views: 278, sales: 390 },
-    { name: 'Kính mát uv', views: 189, sales: 480 },
-  ]
 
   return (
     <div className="space-y-8">

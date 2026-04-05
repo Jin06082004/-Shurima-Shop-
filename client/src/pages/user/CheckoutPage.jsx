@@ -15,7 +15,7 @@ const PLACEHOLDER_IMG = 'https://images.unsplash.com/photo-1521572163474-6864f9c
 
 const PAYMENT_METHODS = [
   { id: 'cod', label: 'Thanh toán khi nhận hàng (COD)', icon: '💵' },
-  { id: 'bank', label: 'Chuyển khoản ngân hàng', icon: '🏦' },
+  { id: 'vnpay', label: 'VNPay / Chuyển khoản ngân hàng', icon: '🏦' },
   { id: 'momo', label: 'Ví MoMo', icon: '💜' },
 ]
 
@@ -71,13 +71,46 @@ export default function CheckoutPage() {
     setIsLoading(true)
     try {
       const fullAddress = `${form.address}, ${form.city}`.trim().replace(/,$/, '')
-      await apiClient.post('/orders', {
-        user: user._id,
+      const orderRes = await apiClient.post('/orders', {
         address: fullAddress,
-        totalPrice: totalPrice,
         status: 'pending',
       })
-      await fetchCart()
+
+      const orderId = orderRes.data?.data?._id
+      if (!orderId) {
+        throw new Error('Không thể tạo đơn hàng')
+      }
+
+      // Tạo order items để backend tính totalPrice từ dữ liệu thực tế
+      await Promise.all(items.map((item) => apiClient.post('/order-items', {
+        order: orderId,
+        product: typeof item.product === 'object' ? item.product?._id : item.product,
+        variant: item.variant ? (typeof item.variant === 'object' ? item.variant?._id : item.variant) : null,
+        quantity: item.quantity,
+      })))
+
+      // Tạo payment theo phương thức user chọn
+      if (paymentMethod === 'momo') {
+        const momoRes = await apiClient.post('/payments/momo/create', { orderId })
+        const payUrl = momoRes.data?.data?.payUrl
+
+        await Promise.all(items.map((item) => apiClient.delete(`/cart-items/${item._id}`)))
+        await fetchCart()
+
+        if (payUrl) {
+          window.location.href = payUrl
+          return
+        }
+      } else {
+        await apiClient.post('/payments', {
+          orderId,
+          method: paymentMethod,
+        })
+
+        await Promise.all(items.map((item) => apiClient.delete(`/cart-items/${item._id}`)))
+        await fetchCart()
+      }
+
       setSuccess(true)
     } catch (err) {
       setError(err.response?.data?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại!')

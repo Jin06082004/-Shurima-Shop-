@@ -44,6 +44,14 @@ export default function Home() {
   const [products, setProducts] = useState([])
   const [isLoading, setIsLoading] = useState(true)
 
+  const getDisplayPrice = (product) => {
+    if (typeof product.price === 'number') return product.price
+    const variantPrices = (product.variants || [])
+      .map((v) => v?.price)
+      .filter((val) => typeof val === 'number')
+    return variantPrices.length ? Math.min(...variantPrices) : 0
+  }
+
   useEffect(() => {
     getAllProducts({ limit: 8 })
       .then((res) => setProducts(res.data || []))
@@ -124,43 +132,47 @@ export default function Home() {
             {isLoading
               ? Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)
               : products.length > 0
-                ? products.map((product, idx) => (
-                  <Card key={product._id} className="group overflow-hidden border-none shadow-sm hover:shadow-lg transition-all duration-300 bg-white">
-                    <CardContent className="p-0">
-                      <div className="relative aspect-square overflow-hidden bg-muted">
-                        <img
-                          src={product.images?.[0] || PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length]}
-                          alt={product.name}
-                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-                        />
-                        {product.originalPrice && product.originalPrice > product.price && (
-                          <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground">Giảm giá</Badge>
-                        )}
-                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
-                          <Button className="w-[80%] rounded-full shadow-md bg-white text-foreground hover:bg-primary hover:text-primary-foreground transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
-                            <ShoppingCart className="w-4 h-4 mr-2" />
-                            Thêm vào giỏ
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="p-5">
-                        <h3 className="font-medium text-base text-foreground line-clamp-2 leading-snug mb-2 group-hover:text-primary transition-colors">
-                          {product.name}
-                        </h3>
-                        <div className="flex items-center gap-3">
-                          <span className="font-bold text-lg text-primary">
-                            {product.price?.toLocaleString('vi-VN')}đ
-                          </span>
-                          {product.originalPrice && product.originalPrice > product.price && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              {product.originalPrice?.toLocaleString('vi-VN')}đ
-                            </span>
+                ? products.map((product, idx) => {
+                  const displayPrice = getDisplayPrice(product)
+
+                  return (
+                    <Card key={product._id} className="group overflow-hidden border-none shadow-sm hover:shadow-lg transition-all duration-300 bg-white">
+                      <CardContent className="p-0">
+                        <div className="relative aspect-square overflow-hidden bg-muted">
+                          <img
+                            src={product.images?.[0] || PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length]}
+                            alt={product.name}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          />
+                          {product.originalPrice && product.originalPrice > displayPrice && (
+                            <Badge className="absolute top-3 left-3 bg-destructive text-destructive-foreground">Giảm giá</Badge>
                           )}
+                          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-end justify-center pb-4">
+                            <Button className="w-[80%] rounded-full shadow-md bg-white text-foreground hover:bg-primary hover:text-primary-foreground transform translate-y-4 group-hover:translate-y-0 transition-all duration-300">
+                              <ShoppingCart className="w-4 h-4 mr-2" />
+                              Thêm vào giỏ
+                            </Button>
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))
+                        <div className="p-5">
+                          <h3 className="font-medium text-base text-foreground line-clamp-2 leading-snug mb-2 group-hover:text-primary transition-colors">
+                            {product.name}
+                          </h3>
+                          <div className="flex items-center gap-3">
+                            <span className="font-bold text-lg text-primary">
+                              {displayPrice.toLocaleString('vi-VN')}đ
+                            </span>
+                            {product.originalPrice && product.originalPrice > displayPrice && (
+                              <span className="text-sm text-muted-foreground line-through">
+                                {product.originalPrice?.toLocaleString('vi-VN')}đ
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )
+                })
                 : (
                   <div className="col-span-4 text-center py-16 text-muted-foreground">
                     Chưa có sản phẩm nào. Hãy quay lại sau nhé!

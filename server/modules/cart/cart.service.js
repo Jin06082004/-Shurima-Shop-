@@ -4,6 +4,10 @@ const getCarts = async () => {
 	return Cart.find().sort({ createdAt: -1 }).populate("user");
 };
 
+const getCartsByUser = async (userId) => {
+	return Cart.find({ user: userId }).sort({ createdAt: -1 }).populate("user");
+};
+
 const getCartById = async (id) => {
 	return Cart.findById(id).populate("user");
 };
@@ -54,6 +58,7 @@ const deleteCart = async (id) => {
 
 module.exports = {
 	getCarts,
+	getCartsByUser,
 	getCartById,
 	createCart,
 	updateCart,

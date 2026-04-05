@@ -1,3 +1,4 @@
+const userService = require('./user.service');
 const { createUserSchema, updateUserSchema } = require('./user.validation');
 
 module.exports = {

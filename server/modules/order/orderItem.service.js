@@ -73,14 +73,26 @@ const createOrderItem = async (payload) => {
 };
 
 const updateOrderItem = async (id, payload) => {
-	return OrderItem.findByIdAndUpdate(id, payload, {
+	const item = await OrderItem.findByIdAndUpdate(id, payload, {
 		new: true,
 		runValidators: true,
 	});
+
+	if (item) {
+		await recalcOrderTotal(item.order);
+	}
+
+	return item;
 };
 
 const deleteOrderItem = async (id) => {
-	return OrderItem.findByIdAndDelete(id);
+	const item = await OrderItem.findByIdAndDelete(id);
+
+	if (item) {
+		await recalcOrderTotal(item.order);
+	}
+
+	return item;
 };
 
 module.exports = {

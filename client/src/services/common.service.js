@@ -14,6 +14,11 @@ export const createCategory = async (data) => {
   return response.data
 }
 
+export const updateCategory = async (id, data) => {
+  const response = await apiClient.put(`/categories/${id}`, data)
+  return response.data
+}
+
 export const deleteCategory = async (id) => {
   const response = await apiClient.delete(`/categories/${id}`)
   return response.data
@@ -25,5 +30,20 @@ export const deleteCategory = async (id) => {
  */
 export const getAllUsers = async (params = {}) => {
   const response = await apiClient.get('/users', { params })
+  return response.data
+}
+
+export const createUser = async (data) => {
+  const response = await apiClient.post('/users', data)
+  return response.data
+}
+
+export const updateUser = async (id, data) => {
+  const response = await apiClient.put(`/users/${id}`, data)
+  return response.data
+}
+
+export const deleteUser = async (id) => {
+  const response = await apiClient.delete(`/users/${id}`)
   return response.data
 }

@@ -119,7 +119,11 @@ export function CartProvider({ children }) {
   // Tính tổng từ item.product.price (đã populate)
   const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0)
   const totalPrice = items.reduce((sum, item) => {
-    const price = item.product?.price || 0
+    const variantPrice = item.variant?.price
+    const productPrice = item.product?.price
+    const price = typeof variantPrice === 'number'
+      ? variantPrice
+      : (typeof productPrice === 'number' ? productPrice : 0)
     return sum + price * (item.quantity || 1)
   }, 0)
 

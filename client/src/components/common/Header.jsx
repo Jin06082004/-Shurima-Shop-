@@ -93,18 +93,14 @@ export default function Header() {
             {/* Profile / Login */}
             {user ? (
               <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="hover:text-primary outline-none"
-                  >
-                    <img
-                      src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email)}&background=c0df85&color=fff&size=32`}
-                      alt="Profile"
-                      className="h-7 w-7 rounded-full"
-                    />
-                  </Button>
+                <DropdownMenuTrigger
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted hover:text-foreground outline-none"
+                >
+                  <img
+                    src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user.name || user.email)}&background=c0df85&color=fff&size=32`}
+                    alt="Profile"
+                    className="h-7 w-7 rounded-full"
+                  />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 mt-2">
                   <div className="flex flex-col space-y-1 p-2">

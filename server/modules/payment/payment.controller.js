@@ -9,10 +9,10 @@ module.exports = {
             if (error) return res.status(400).json({ status: 'error', message: error.details[0].message });
 
             const { orderId, method } = req.body;
-            const newPayment = await paymentService.CreatePayment(orderId, method);
+            const newPayment = await paymentService.CreatePayment(orderId, method, req.user);
             res.status(201).json({ status: 'success', data: newPayment });
         } catch (error) {
-            res.status(500).json({ status: 'error', message: error.message });
+            res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
         }
     },
 
@@ -56,22 +56,22 @@ module.exports = {
     // GET /payment/:id
     getById: async (req, res) => {
         try {
-            const payment = await paymentService.GetPaymentById(req.params.id);
+            const payment = await paymentService.GetPaymentById(req.params.id, req.user);
             if (!payment) return res.status(404).json({ status: 'error', message: 'Payment not found' });
             res.status(200).json({ status: 'success', data: payment });
         } catch (error) {
-            res.status(500).json({ status: 'error', message: error.message });
+            res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
         }
     },
 
     // GET /payment/order/:orderId
     getByOrderId: async (req, res) => {
         try {
-            const payment = await paymentService.GetPaymentByOrder(req.params.orderId);
+            const payment = await paymentService.GetPaymentByOrder(req.params.orderId, req.user);
             if (!payment) return res.status(404).json({ status: 'error', message: 'Payment not found for this order' });
             res.status(200).json({ status: 'success', data: payment });
         } catch (error) {
-            res.status(500).json({ status: 'error', message: error.message });
+            res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
         }
     },
 

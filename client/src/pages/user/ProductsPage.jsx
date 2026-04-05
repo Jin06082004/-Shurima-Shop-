@@ -68,6 +68,22 @@ export default function ProductsPage() {
     }
   }
 
+  const getDisplayPrice = (product) => {
+    if (typeof product.price === 'number') return product.price
+    const variantPrices = (product.variants || [])
+      .map((v) => v?.price)
+      .filter((p) => typeof p === 'number')
+    return variantPrices.length ? Math.min(...variantPrices) : 0
+  }
+
+  const getDisplayStock = (product) => {
+    const variantStocks = (product.variants || [])
+      .map((v) => Number(v?.stock || 0))
+      .reduce((sum, n) => sum + n, 0)
+    const productStock = Number(product.stock || 0)
+    return Math.max(productStock, variantStocks)
+  }
+
   const handleAddToCart = async (e, product) => {
     e.preventDefault()
     if (!user) { navigate('/login'); return }
@@ -149,38 +165,46 @@ export default function ProductsPage() {
               {isLoading
                 ? Array.from({ length: 8 }).map((_, i) => <ProductSkeleton key={i} />)
                 : products.length > 0
-                  ? products.map((product, idx) => (
-                    <Link to={`/products/${product._id}`} key={product._id}>
-                      <Card className="group overflow-hidden border-none shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full">
-                        <CardContent className="p-0">
-                          <div className="relative aspect-square overflow-hidden">
-                            <img
-                              src={product.images?.[0] || PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length]}
-                              alt={product.name}
-                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-                            />
-                            <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                              <Button
-                                onClick={(e) => handleAddToCart(e, product)}
-                                className="w-[80%] rounded-full bg-white text-foreground hover:bg-primary hover:text-primary-foreground text-sm transform translate-y-3 group-hover:translate-y-0 transition-all duration-300 shadow-md"
-                              >
-                                <ShoppingCart className="w-4 h-4 mr-1" /> Thêm vào giỏ
-                              </Button>
+                  ? products.map((product, idx) => {
+                    const displayPrice = getDisplayPrice(product)
+                    const displayStock = getDisplayStock(product)
+
+                    return (
+                      <Link to={`/products/${product._id}`} key={product._id}>
+                        <Card className="group overflow-hidden border-none shadow-sm hover:shadow-lg transition-all duration-300 bg-white h-full">
+                          <CardContent className="p-0">
+                            <div className="relative aspect-square overflow-hidden">
+                              <img
+                                src={product.images?.[0] || PLACEHOLDER_IMAGES[idx % PLACEHOLDER_IMAGES.length]}
+                                alt={product.name}
+                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                              />
+                              <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <Button
+                                  onClick={(e) => handleAddToCart(e, product)}
+                                  className="w-[80%] rounded-full bg-white text-foreground hover:bg-primary hover:text-primary-foreground text-sm transform translate-y-3 group-hover:translate-y-0 transition-all duration-300 shadow-md"
+                                >
+                                  <ShoppingCart className="w-4 h-4 mr-1" /> Thêm vào giỏ
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                          <div className="p-4">
-                            <h3 className="font-medium text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">{product.name}</h3>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span className="font-bold text-primary">{product.price?.toLocaleString('vi-VN')}đ</span>
-                              {product.originalPrice && product.originalPrice > product.price && (
-                                <span className="text-xs text-muted-foreground line-through">{product.originalPrice?.toLocaleString('vi-VN')}đ</span>
-                              )}
+                            <div className="p-4">
+                              <h3 className="font-medium text-sm leading-snug line-clamp-2 group-hover:text-primary transition-colors">{product.name}</h3>
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                {displayStock > 0 ? `Còn ${displayStock} sản phẩm` : 'Hết hàng'}
+                              </div>
+                              <div className="flex items-center gap-2 mt-2">
+                                <span className="font-bold text-primary">{displayPrice.toLocaleString('vi-VN')}đ</span>
+                                {product.originalPrice && product.originalPrice > displayPrice && (
+                                  <span className="text-xs text-muted-foreground line-through">{product.originalPrice?.toLocaleString('vi-VN')}đ</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </Link>
-                  ))
+                          </CardContent>
+                        </Card>
+                      </Link>
+                    )
+                  })
                   : (
                     <div className="col-span-4 py-20 text-center">
                       <SlidersHorizontal className="h-10 w-10 mx-auto text-muted-foreground mb-4" />

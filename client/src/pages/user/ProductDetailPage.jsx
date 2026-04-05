@@ -24,6 +24,24 @@ export default function ProductDetailPage() {
   const [adding, setAdding] = useState(false)
   const [toast, setToast] = useState(null)
 
+  const getDisplayPrice = (p) => {
+    if (!p) return 0
+    if (typeof p.price === 'number') return p.price
+    const variantPrices = (p.variants || [])
+      .map((v) => v?.price)
+      .filter((val) => typeof val === 'number')
+    return variantPrices.length ? Math.min(...variantPrices) : 0
+  }
+
+  const getDisplayStock = (p) => {
+    if (!p) return 0
+    const variantStocks = (p.variants || [])
+      .map((v) => Number(v?.stock || 0))
+      .reduce((sum, n) => sum + n, 0)
+    const productStock = Number(p.stock || 0)
+    return Math.max(productStock, variantStocks)
+  }
+
   useEffect(() => {
     setIsLoading(true)
     getProductById(id)
@@ -66,6 +84,9 @@ export default function ProductDetailPage() {
       </div>
     )
   }
+
+  const displayPrice = getDisplayPrice(product)
+  const displayStock = getDisplayStock(product)
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -117,9 +138,9 @@ export default function ProductDetailPage() {
 
           <div className="flex items-baseline gap-4">
             <span className="text-4xl font-extrabold text-primary">
-              {product.price?.toLocaleString('vi-VN')}đ
+              {displayPrice.toLocaleString('vi-VN')}đ
             </span>
-            {product.originalPrice && product.originalPrice > product.price && (
+            {product.originalPrice && product.originalPrice > displayPrice && (
               <span className="text-xl text-muted-foreground line-through">
                 {product.originalPrice?.toLocaleString('vi-VN')}đ
               </span>
@@ -132,8 +153,8 @@ export default function ProductDetailPage() {
 
           <div className="flex items-center gap-2 text-sm">
             <Package className="h-4 w-4 text-muted-foreground" />
-            {product.stock > 0
-              ? <span className="text-green-600 font-medium">Còn {product.stock} sản phẩm</span>
+            {displayStock > 0
+              ? <span className="text-green-600 font-medium">Còn {displayStock} sản phẩm</span>
               : <span className="text-muted-foreground">Liên hệ để biết tình trạng hàng</span>
             }
           </div>
@@ -146,7 +167,7 @@ export default function ProductDetailPage() {
               >−</button>
               <span className="px-6 py-2 font-semibold">{qty}</span>
               <button
-                onClick={() => setQty(Math.min(product.stock || 99, qty + 1))}
+                onClick={() => setQty(Math.min(displayStock || 99, qty + 1))}
                 className="px-4 py-2 bg-muted hover:bg-muted/80 text-lg font-medium transition-colors"
               >+</button>
             </div>

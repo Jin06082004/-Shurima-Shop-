@@ -4,11 +4,9 @@ const objectIdRule = Joi.string().trim().length(24).hex();
 const statusRule = Joi.string().valid("pending", "shipping", "completed", "cancelled");
 
 const createOrderSchema = Joi.object({
-	user: objectIdRule.required().messages({
-		"string.empty": "User is required",
+	user: objectIdRule.messages({
 		"string.length": "User must be a valid id",
 		"string.hex": "User must be a valid id",
-		"any.required": "User is required",
 	}),
 	totalPrice: Joi.number().min(0).optional().messages({
 		"number.base": "Total price must be a number",

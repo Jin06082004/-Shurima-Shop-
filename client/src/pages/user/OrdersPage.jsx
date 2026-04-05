@@ -8,9 +8,8 @@ import { useAuth } from '../../context/AuthContext'
 
 const STATUS_CONFIG = {
   pending:  { label: 'Chờ xử lý',   className: 'bg-amber-100 text-amber-700' },
-  confirmed:{ label: 'Đã xác nhận', className: 'bg-blue-100 text-blue-700' },
   shipping: { label: 'Đang giao',   className: 'bg-indigo-100 text-indigo-700' },
-  done:     { label: 'Hoàn thành',  className: 'bg-green-100 text-green-700' },
+  completed:{ label: 'Hoàn thành',  className: 'bg-green-100 text-green-700' },
   cancelled:{ label: 'Đã hủy',      className: 'bg-red-100 text-red-700' },
 }
 
@@ -75,11 +74,11 @@ export default function OrdersPage() {
                   <Badge className={`${cfg.className} font-medium text-xs px-3 py-1`}>{cfg.label}</Badge>
                 </div>
 
-                {order.items?.slice(0, 2).map((item, idx) => (
+                {(order.items || []).slice(0, 2).map((item, idx) => (
                   <div key={idx} className="flex items-center gap-3 py-2 border-t first:border-t-0">
                     <div className="w-12 h-12 rounded-lg bg-muted overflow-hidden flex-shrink-0">
                       <img
-                        src={item.product?.image || `https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&q=60`}
+                        src={item.product?.images?.[0] || `https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=100&q=60`}
                         alt={item.product?.name}
                         className="w-full h-full object-cover"
                       />
@@ -91,13 +90,13 @@ export default function OrdersPage() {
                     <p className="text-sm font-semibold">{((item.price || 0) * item.quantity).toLocaleString('vi-VN')}đ</p>
                   </div>
                 ))}
-                {order.items?.length > 2 && (
+                {(order.items || []).length > 2 && (
                   <p className="text-xs text-muted-foreground pt-2 border-t">+{order.items.length - 2} sản phẩm khác</p>
                 )}
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <span className="text-sm text-muted-foreground">Tổng tiền</span>
-                  <span className="font-bold text-primary text-lg">{order.totalAmount?.toLocaleString('vi-VN')}đ</span>
+                  <span className="font-bold text-primary text-lg">{(order.totalPrice || 0).toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
             )

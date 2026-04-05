@@ -40,14 +40,12 @@ export default function Topbar() {
         </Button>
 
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <div className="h-8 w-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center cursor-pointer overflow-hidden ml-2">
-              <img
-                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&background=c0df85&color=fff`}
-                alt="Avatar"
-                className="w-full h-full object-cover"
-              />
-            </div>
+          <DropdownMenuTrigger className="ml-2 h-8 w-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center cursor-pointer overflow-hidden outline-none">
+            <img
+              src={`https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'Admin')}&background=c0df85&color=fff`}
+              alt="Avatar"
+              className="w-full h-full object-cover"
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="font-normal">
