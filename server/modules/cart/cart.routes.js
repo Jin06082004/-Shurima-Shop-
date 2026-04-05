@@ -15,10 +15,12 @@ const {
 	validateUpdateCartBody,
 } = require("./cart.validation");
 
-router.get("/", getCarts);
-router.get("/:id", getCartById);
-router.post("/", validateCreateCartBody, createCart);
-router.put("/:id", validateUpdateCartBody, updateCart);
-router.delete("/:id", deleteCart);
+const { verifyToken } = require("../../middlewares/auth.middleware");
+
+router.get("/", verifyToken, getCarts);
+router.get("/:id", verifyToken, getCartById);
+router.post("/", verifyToken, validateCreateCartBody, createCart);
+router.put("/:id", verifyToken, validateUpdateCartBody, updateCart);
+router.delete("/:id", verifyToken, deleteCart);
 
 module.exports = router;

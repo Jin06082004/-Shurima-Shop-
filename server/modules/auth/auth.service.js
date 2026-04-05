@@ -45,7 +45,7 @@ const login = async (email, password) => {
 
   // Include user id + role in token
   const payload = {
-    userId: user._id,
+    id: user._id,
     role: user.role
   };
 

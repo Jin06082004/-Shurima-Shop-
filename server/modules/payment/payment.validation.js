@@ -5,8 +5,12 @@ const createPaymentSchema = Joi.object({
     method: Joi.string().valid('cod', 'momo', 'vnpay').required()
 });
 
-const updatePaymentStatusSchema = Joi.object({
-    status: Joi.string().valid('pending', 'paid').required()
+const createMomoPaymentSchema = Joi.object({
+    orderId: Joi.string().required()
 });
 
-module.exports = { createPaymentSchema, updatePaymentStatusSchema };
+const updatePaymentStatusSchema = Joi.object({
+    status: Joi.string().valid('pending', 'paid', 'failed', 'cancelled').required()
+});
+
+module.exports = { createPaymentSchema, createMomoPaymentSchema, updatePaymentStatusSchema };

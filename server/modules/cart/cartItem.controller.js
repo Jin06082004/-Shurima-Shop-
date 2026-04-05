@@ -47,7 +47,7 @@ const createCartItem = async (req, res) => {
 			data: cartItem,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.statusCode || 500).json({ message: error.message });
 	}
 };
 

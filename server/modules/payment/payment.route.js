@@ -1,14 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const paymentController = require('./payment.controller');
+const { verifyToken, isAdmin } = require('../../middlewares/auth.middleware');
 
-router.post('/', paymentController.create);
-router.get('/', paymentController.getAll);
-router.get('/:id', paymentController.getById);
-router.get('/order/:orderId', paymentController.getByOrderId);
-router.put('/:id', paymentController.updateStatus);
-router.patch('/:id', paymentController.updateStatus);
-router.put('/order/:orderId', paymentController.updateStatusByOrder);
-router.patch('/order/:orderId', paymentController.updateStatusByOrder);
+// MoMo callback must be public so provider can call it
+router.post('/momo/ipn', paymentController.momoIpn);
+router.post('/momo/create', verifyToken, paymentController.createMomoPayment);
+
+router.post('/', verifyToken, paymentController.create);
+router.get('/', verifyToken, isAdmin, paymentController.getAll);
+// Specific routes must come before /:id
+router.get('/order/:orderId', verifyToken, paymentController.getByOrderId);
+router.get('/:id', verifyToken, paymentController.getById);
+router.put('/order/:orderId', verifyToken, isAdmin, paymentController.updateStatusByOrder);
+router.patch('/order/:orderId', verifyToken, isAdmin, paymentController.updateStatusByOrder);
+router.put('/:id', verifyToken, isAdmin, paymentController.updateStatus);
+router.patch('/:id', verifyToken, isAdmin, paymentController.updateStatus);
 
 module.exports = router;

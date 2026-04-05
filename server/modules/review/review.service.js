@@ -1,4 +1,16 @@
 const Review = require('./review.model');
+const Product = require('../product/product.model');
+
+/**
+ * Recalculate and persist the average rating on the product after any review change.
+ */
+const recalcAvgRating = async (productId) => {
+    const reviews = await Review.find({ product: productId });
+    const avg = reviews.length > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
+        : 0;
+    await Product.findByIdAndUpdate(productId, { avgRating: Math.round(avg * 10) / 10 });
+};
 
 module.exports = {
     CreateReview: async function (userId, productId, rating, comment) {
@@ -8,11 +20,13 @@ module.exports = {
             rating: rating,
             comment: comment
         });
-        return await newReview.save();
+        const saved = await newReview.save();
+        await recalcAvgRating(productId);
+        return saved;
     },
     GetAllReviews: async function () {
         return await Review.find()
-            .populate('user', 'name auth')
+            .populate('user', 'name email')
             .populate('product', 'name price');
     },
     GetReviewById: async function (id) {
@@ -22,12 +36,17 @@ module.exports = {
         return await Review.find({ product: productId }).populate('user', 'name');
     },
     GetReviewsByUser: async function (userId) {
-        return await Review.find({ user: userId }).populate('product', 'name front_image');
+        return await Review.find({ user: userId }).populate('product', 'name images');
     },
     UpdateReview: async function (id, updateData) {
-        return await Review.findByIdAndUpdate(id, updateData, { new: true });
+        const review = await Review.findByIdAndUpdate(id, updateData, { new: true });
+        if (review) await recalcAvgRating(review.product);
+        return review;
     },
     DeleteReview: async function (id) {
-        return await Review.findByIdAndDelete(id);
+        const review = await Review.findById(id);
+        const result = await Review.findByIdAndDelete(id);
+        if (review) await recalcAvgRating(review.product);
+        return result;
     }
 };

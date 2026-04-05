@@ -15,10 +15,12 @@ const {
 	validateUpdateOrderBody,
 } = require("./order.validation");
 
-router.get("/", getOrders);
-router.get("/:id", getOrderById);
-router.post("/", validateCreateOrderBody, createOrder);
-router.put("/:id", validateUpdateOrderBody, updateOrder);
-router.delete("/:id", deleteOrder);
+const { verifyToken, isAdmin } = require("../../middlewares/auth.middleware");
+
+router.get("/", verifyToken, isAdmin, getOrders);
+router.get("/:id", verifyToken, getOrderById);
+router.post("/", verifyToken, validateCreateOrderBody, createOrder);
+router.put("/:id", verifyToken, isAdmin, validateUpdateOrderBody, updateOrder);
+router.delete("/:id", verifyToken, isAdmin, deleteOrder);
 
 module.exports = router;

@@ -25,10 +25,9 @@ const createOrderItemSchema = Joi.object({
 		"number.min": "Quantity must be at least 1",
 		"any.required": "Quantity is required",
 	}),
-	price: Joi.number().min(0).required().messages({
+	price: Joi.number().min(0).optional().messages({
 		"number.base": "Price must be a number",
 		"number.min": "Price must be greater than or equal to 0",
-		"any.required": "Price is required",
 	}),
 });
 

@@ -1,8 +1,12 @@
 const User = require('./user.model');
+const bcrypt = require('bcryptjs');
 
 module.exports = {
-    CreateAnUser: async function (name, phone, address, session) {
-        let newUser = new User({ name, phone, address });
+    CreateAnUser: async function (userData, session) {
+        const { name, email, password, phone, address, role } = userData;
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        let newUser = new User({ name, email, password: hashedPassword, phone, address, role: role || 'user' });
         if (session) return await newUser.save({ session });
         return await newUser.save();
     },

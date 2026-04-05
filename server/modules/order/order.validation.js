@@ -10,10 +10,9 @@ const createOrderSchema = Joi.object({
 		"string.hex": "User must be a valid id",
 		"any.required": "User is required",
 	}),
-	totalPrice: Joi.number().min(0).required().messages({
+	totalPrice: Joi.number().min(0).optional().messages({
 		"number.base": "Total price must be a number",
 		"number.min": "Total price must be greater than or equal to 0",
-		"any.required": "Total price is required",
 	}),
 	status: statusRule.default("pending"),
 	address: Joi.string().trim().required().messages({

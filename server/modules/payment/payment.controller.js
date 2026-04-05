@@ -1,5 +1,5 @@
 const paymentService = require('./payment.service');
-const { createPaymentSchema, updatePaymentStatusSchema } = require('./payment.validation');
+const { createPaymentSchema, createMomoPaymentSchema, updatePaymentStatusSchema } = require('./payment.validation');
 
 module.exports = {
     // POST /payment
@@ -13,6 +13,33 @@ module.exports = {
             res.status(201).json({ status: 'success', data: newPayment });
         } catch (error) {
             res.status(500).json({ status: 'error', message: error.message });
+        }
+    },
+
+    // POST /payment/momo/create
+    createMomoPayment: async (req, res) => {
+        try {
+            const { error } = createMomoPaymentSchema.validate(req.body);
+            if (error) return res.status(400).json({ status: 'error', message: error.details[0].message });
+
+            const result = await paymentService.CreateMomoPayment(req.body.orderId, req.user);
+            res.status(200).json({
+                status: 'success',
+                message: 'MoMo payment initialized',
+                data: result,
+            });
+        } catch (error) {
+            res.status(error.statusCode || 500).json({ status: 'error', message: error.message });
+        }
+    },
+
+    // POST /payment/momo/ipn
+    momoIpn: async (req, res) => {
+        try {
+            const result = await paymentService.HandleMomoIpn(req.body);
+            return res.status(200).json(result);
+        } catch (error) {
+            return res.status(500).json({ resultCode: 99, message: error.message });
         }
     },
 

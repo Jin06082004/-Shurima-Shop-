@@ -47,7 +47,7 @@ const createOrderItem = async (req, res) => {
 			data: orderItem,
 		});
 	} catch (error) {
-		res.status(500).json({ message: error.message });
+		res.status(error.statusCode || 500).json({ message: error.message });
 	}
 };
 

@@ -2,16 +2,20 @@ const userService = require('./user.service');
 const { createUserSchema, updateUserSchema } = require('./user.validation');
 
 module.exports = {
-    // POST /user
+    // POST /users  (admin only)
     create: async (req, res) => {
         try {
             const { error } = createUserSchema.validate(req.body);
             if (error) return res.status(400).json({ success: false, message: error.details[0].message });
-            
-            const { name, phone, address } = req.body;
-            const newUser = await userService.CreateAnUser(name, phone, address);
-            res.status(201).json({ success: true, data: newUser });
+
+            const newUser = await userService.CreateAnUser(req.body);
+            const result = newUser.toObject();
+            delete result.password;
+            res.status(201).json({ success: true, data: result });
         } catch (error) {
+            if (error.code === 11000) {
+                return res.status(409).json({ success: false, message: 'Email already exists' });
+            }
             res.status(500).json({ success: false, message: error.message });
         }
     },
