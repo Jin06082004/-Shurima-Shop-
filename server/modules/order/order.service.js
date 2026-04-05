@@ -26,17 +26,17 @@ const attachItems = async (orders) => {
 };
 
 const getOrders = async () => {
-	const orders = await Order.find().sort({ createdAt: -1 }).populate("user").lean();
+	const orders = await Order.find().sort({ createdAt: -1 }).populate("user", "name email").lean();
 	return attachItems(orders);
 };
 
 const getOrdersByUser = async (userId) => {
-	const orders = await Order.find({ user: userId }).sort({ createdAt: -1 }).populate("user").lean();
+	const orders = await Order.find({ user: userId }).sort({ createdAt: -1 }).populate("user", "name email").lean();
 	return attachItems(orders);
 };
 
 const getOrderById = async (id) => {
-	const order = await Order.findById(id).populate("user").lean();
+	const order = await Order.findById(id).populate("user", "name email").lean();
 	if (!order) {
 		return null;
 	}

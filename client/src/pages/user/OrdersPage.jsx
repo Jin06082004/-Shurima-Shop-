@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Package, ChevronRight, AlertCircle } from 'lucide-react'
+import { Package, AlertCircle, RefreshCw, MapPin, CalendarDays } from 'lucide-react'
 import { Button } from '../../components/ui/button'
 import { Badge } from '../../components/ui/badge'
 import { getAllOrders } from '../../services/order.service'
@@ -17,22 +17,65 @@ export default function OrdersPage() {
   const { user } = useAuth()
   const navigate = useNavigate()
   const [orders, setOrders] = useState([])
+  const [statusFilter, setStatusFilter] = useState('all')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
 
+  const fetchOrders = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const res = await getAllOrders()
+      setOrders(res.data || [])
+    } catch (err) {
+      setError(err.response?.data?.message || 'Không thể tải đơn hàng.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!user) { navigate('/login'); return }
-    getAllOrders()
-      .then((res) => setOrders(res.data || []))
-      .catch((err) => setError(err.response?.data?.message || 'Không thể tải đơn hàng.'))
-      .finally(() => setIsLoading(false))
-  }, [user])
+    fetchOrders()
+  }, [user, navigate])
+
+  const filteredOrders = useMemo(() => {
+    if (statusFilter === 'all') return orders
+    return orders.filter((order) => order.status === statusFilter)
+  }, [orders, statusFilter])
 
   if (!user) return null
 
   return (
     <div className="container mx-auto px-4 py-12 max-w-3xl">
-      <h1 className="text-3xl font-extrabold mb-8">Đơn hàng của tôi</h1>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+        <h1 className="text-3xl font-extrabold">Đơn hàng của tôi</h1>
+        <Button variant="outline" onClick={fetchOrders} className="gap-2">
+          <RefreshCw className="h-4 w-4" />
+          Làm mới
+        </Button>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {[
+          { key: 'all', label: 'Tất cả' },
+          { key: 'pending', label: 'Chờ xử lý' },
+          { key: 'shipping', label: 'Đang giao' },
+          { key: 'completed', label: 'Hoàn thành' },
+          { key: 'cancelled', label: 'Đã hủy' },
+        ].map((item) => (
+          <Button
+            key={item.key}
+            type="button"
+            size="sm"
+            variant={statusFilter === item.key ? 'default' : 'outline'}
+            onClick={() => setStatusFilter(item.key)}
+            className="rounded-full"
+          >
+            {item.label}
+          </Button>
+        ))}
+      </div>
 
       {isLoading && (
         <div className="flex justify-center py-20">
@@ -47,29 +90,37 @@ export default function OrdersPage() {
         </div>
       )}
 
-      {!isLoading && !error && orders.length === 0 && (
+      {!isLoading && !error && filteredOrders.length === 0 && (
         <div className="text-center py-24">
           <Package className="h-16 w-16 mx-auto text-muted mb-4" />
-          <h2 className="text-xl font-bold mb-2">Chưa có đơn hàng</h2>
-          <p className="text-muted-foreground mb-8">Bắt đầu mua sắm để tạo đơn hàng đầu tiên của bạn!</p>
+          <h2 className="text-xl font-bold mb-2">Không có đơn hàng phù hợp</h2>
+          <p className="text-muted-foreground mb-8">Thử đổi bộ lọc hoặc bắt đầu mua sắm để tạo đơn mới.</p>
           <Button size="lg" onClick={() => navigate('/products')} className="rounded-full px-10">
             Khám phá sản phẩm
           </Button>
         </div>
       )}
 
-      {!isLoading && !error && orders.length > 0 && (
+      {!isLoading && !error && filteredOrders.length > 0 && (
         <div className="space-y-4">
-          {orders.map((order) => {
+          {filteredOrders.map((order) => {
             const cfg = STATUS_CONFIG[order.status] || { label: order.status, className: '' }
+            const displayTotal = Number(order.finalPrice || order.totalPrice || 0)
             return (
               <div key={order._id} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
                 <div className="flex items-center justify-between mb-4">
                   <div>
                     <p className="font-bold text-foreground">#{order._id?.slice(-8).toUpperCase()}</p>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {new Date(order.createdAt).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </p>
+                    <div className="text-xs text-muted-foreground mt-1 space-y-1">
+                      <p className="inline-flex items-center gap-1">
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {new Date(order.createdAt).toLocaleDateString('vi-VN', { year: 'numeric', month: 'long', day: 'numeric' })}
+                      </p>
+                      <p className="inline-flex items-center gap-1 break-all">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {order.address || 'Chưa có địa chỉ giao hàng'}
+                      </p>
+                    </div>
                   </div>
                   <Badge className={`${cfg.className} font-medium text-xs px-3 py-1`}>{cfg.label}</Badge>
                 </div>
@@ -96,7 +147,7 @@ export default function OrdersPage() {
 
                 <div className="flex items-center justify-between mt-4 pt-4 border-t">
                   <span className="text-sm text-muted-foreground">Tổng tiền</span>
-                  <span className="font-bold text-primary text-lg">{(order.totalPrice || 0).toLocaleString('vi-VN')}đ</span>
+                  <span className="font-bold text-primary text-lg">{displayTotal.toLocaleString('vi-VN')}đ</span>
                 </div>
               </div>
             )

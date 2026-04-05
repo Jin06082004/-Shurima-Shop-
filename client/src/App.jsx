@@ -18,6 +18,7 @@ import ProfilePage from './pages/user/ProfilePage'
 import OrdersPage from './pages/user/OrdersPage'
 import CheckoutPage from './pages/user/CheckoutPage'
 import CheckoutResultPage from './pages/user/CheckoutResultPage'
+import SaleHuntPage from './pages/user/SaleHuntPage'
 
 // Admin Pages
 import DashboardOverview from './pages/admin/DashboardOverview'
@@ -48,6 +49,7 @@ function App() {
               <Route path="cart" element={<CartPage />} />
               <Route path="checkout" element={<CheckoutPage />} />
               <Route path="checkout/result" element={<CheckoutResultPage />} />
+              <Route path="sale-hunt" element={<SaleHuntPage />} />
               <Route path="profile" element={<ProfilePage />} />
               <Route path="orders" element={<OrdersPage />} />
             </Route>

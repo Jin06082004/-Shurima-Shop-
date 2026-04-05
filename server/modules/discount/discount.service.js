@@ -14,6 +14,22 @@ const getDiscounts = async (query = {}) => {
   return Discount.find(filter).sort({ createdAt: -1 });
 };
 
+const getPublicActiveDiscounts = async () => {
+  const now = new Date();
+
+  return Discount.find({
+    isActive: true,
+    isPublic: true,
+    endDate: { $gte: now },
+    $or: [
+      { usageLimit: null },
+      { $expr: { $lt: ['$usedCount', '$usageLimit'] } },
+    ],
+  })
+    .select('code name description type value minOrderValue maxDiscount startDate endDate usageLimit usedCount')
+    .sort({ endDate: 1, createdAt: -1 });
+};
+
 const getDiscountById = async (id) => {
   return Discount.findById(id);
 };
@@ -54,6 +70,14 @@ const updateDiscount = async (id, payload) => {
 
 const deleteDiscount = async (id) => {
   return Discount.findByIdAndDelete(id);
+};
+
+const setDiscountPublic = async (id, isPublic) => {
+  return Discount.findByIdAndUpdate(
+    id,
+    { isPublic: Boolean(isPublic) },
+    { new: true, runValidators: true }
+  );
 };
 
 const applyDiscountToOrder = async ({ orderId, code, actor }) => {
@@ -162,11 +186,13 @@ const validateDiscountAvailability = (discount, orderAmount = 0) => {
 
 module.exports = {
   getDiscounts,
+  getPublicActiveDiscounts,
   getDiscountById,
   getDiscountByCode,
   createDiscount,
   updateDiscount,
   deleteDiscount,
+  setDiscountPublic,
   validateDiscountAvailability,
   applyDiscountToOrder,
 };

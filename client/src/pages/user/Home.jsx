@@ -237,7 +237,11 @@ export default function Home() {
             <p className="text-xl md:text-2xl text-slate-300 font-light max-w-2xl">
               Giảm giá lên đến <strong className="text-primary">50%</strong> cho toàn bộ sưu tập Thu Đông.
             </p>
-            <Button size="lg" className="h-14 px-10 text-lg rounded-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90">
+            <Button
+              size="lg"
+              className="h-14 px-10 text-lg rounded-full mt-4 bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => navigate('/sale-hunt')}
+            >
               Săn sale ngay
             </Button>
           </div>

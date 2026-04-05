@@ -31,6 +31,7 @@ const createDiscountSchema = Joi.object({
   }),
   usageLimit: Joi.number().integer().min(1).allow(null).optional(),
   isActive: Joi.boolean().optional().default(true),
+  isPublic: Joi.boolean().optional().default(false),
 });
 
 const updateDiscountSchema = Joi.object({
@@ -46,6 +47,7 @@ const updateDiscountSchema = Joi.object({
   usageLimit: Joi.number().integer().min(1).allow(null),
   usedCount: Joi.number().integer().min(0),
   isActive: Joi.boolean(),
+  isPublic: Joi.boolean(),
 })
   .min(1)
   .messages({

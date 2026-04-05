@@ -17,8 +17,20 @@ const verifyToken = (req, res, next) => {
     const secret = process.env.JWT_SECRET || 'fallback_shurima_secret';
     const decoded = jwt.verify(token, secret);
     
-    // Attach decoded user to req.user
-    req.user = decoded; // { id, role, iat, exp }
+    // Normalize user payload because old tokens may use _id/userId instead of id.
+    req.user = {
+      ...decoded,
+      id: decoded.id || decoded._id || decoded.userId,
+      role: decoded.role || (decoded.isAdmin ? 'admin' : undefined),
+    };
+
+    if (!req.user.id) {
+      return res.status(401).json({
+        success: false,
+        message: 'Invalid token payload: missing user id',
+        data: null
+      });
+    }
     
     next();
   } catch (error) {

@@ -1,6 +1,15 @@
 const mongoose = require('mongoose');
 const discountService = require('./discount.service');
 
+const getPublicActiveDiscounts = async (req, res) => {
+  try {
+    const discounts = await discountService.getPublicActiveDiscounts();
+    res.status(200).json({ message: 'Active discounts fetched successfully', data: discounts });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const getDiscounts = async (req, res) => {
   try {
     const discounts = await discountService.getDiscounts(req.query);
@@ -73,6 +82,29 @@ const deleteDiscount = async (req, res) => {
   }
 };
 
+const setPublicStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid discount id' });
+    }
+
+    const isPublic = req.body?.isPublic;
+    if (typeof isPublic !== 'boolean') {
+      return res.status(400).json({ message: 'isPublic must be a boolean' });
+    }
+
+    const discount = await discountService.setDiscountPublic(id, isPublic);
+    if (!discount) {
+      return res.status(404).json({ message: 'Discount not found' });
+    }
+
+    res.status(200).json({ message: 'Discount public status updated successfully', data: discount });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 const validateByCode = async (req, res) => {
   try {
     const { code } = req.params;
@@ -109,11 +141,13 @@ const applyToOrder = async (req, res) => {
 };
 
 module.exports = {
+  getPublicActiveDiscounts,
   getDiscounts,
   getDiscountById,
   createDiscount,
   updateDiscount,
   deleteDiscount,
+  setPublicStatus,
   validateByCode,
   applyToOrder,
 };

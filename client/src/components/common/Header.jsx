@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, ShoppingBag, User, LogIn, LayoutDashboard, LogOut } from 'lucide-react'
+import { Search, ShoppingBag, User, LogIn, LayoutDashboard, LogOut, Package } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import {
@@ -111,6 +111,10 @@ export default function Header() {
                   <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer py-2">
                     <User className="mr-2 h-4 w-4" />
                     Tài khoản của tôi
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate('/orders')} className="cursor-pointer py-2">
+                    <Package className="mr-2 h-4 w-4" />
+                    Đơn hàng của tôi
                   </DropdownMenuItem>
                   {user.role === 'admin' && (
                     <DropdownMenuItem onClick={() => navigate('/admin/dashboard')} className="cursor-pointer py-2 text-primary focus:text-primary focus:bg-primary/10">

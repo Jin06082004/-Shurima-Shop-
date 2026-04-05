@@ -47,8 +47,13 @@ const getOrderById = async (req, res) => {
 const createOrder = async (req, res) => {
 	try {
 		const payload = { ...req.body };
+		const actorId = req.user?.id || req.user?._id || req.user?.userId;
+
 		if (req.user.role !== "admin") {
-			payload.user = req.user.id;
+			if (!actorId) {
+				return res.status(401).json({ message: "Invalid token payload: missing user id" });
+			}
+			payload.user = actorId;
 		}
 
 		const order = await orderService.createOrder(payload);

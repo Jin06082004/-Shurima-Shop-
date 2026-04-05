@@ -18,7 +18,7 @@ import {
   DialogTrigger,
 } from '../../components/ui/dialog'
 import { Label } from '../../components/ui/label'
-import { getAllDiscounts, createDiscount, updateDiscount, deleteDiscount } from '../../services/discount.service'
+import { getAllDiscounts, createDiscount, updateDiscount, deleteDiscount, setDiscountPublicStatus } from '../../services/discount.service'
 
 const INITIAL_FORM = {
   code: '',
@@ -32,6 +32,7 @@ const INITIAL_FORM = {
   endDate: '',
   usageLimit: '',
   isActive: true,
+  isPublic: false,
 }
 
 export default function DiscountsPage() {
@@ -48,6 +49,22 @@ export default function DiscountsPage() {
     setToast({ message, type })
     setTimeout(() => setToast(null), 3000)
   }
+
+  const buildUpdatePayload = (discount, override = {}) => ({
+    code: discount.code,
+    name: discount.name,
+    description: discount.description || '',
+    type: discount.type,
+    value: Number(discount.value || 0),
+    minOrderValue: Number(discount.minOrderValue || 0),
+    maxDiscount: discount.maxDiscount === null || discount.maxDiscount === undefined ? null : Number(discount.maxDiscount),
+    startDate: discount.startDate ? new Date(discount.startDate).toISOString() : undefined,
+    endDate: discount.endDate ? new Date(discount.endDate).toISOString() : undefined,
+    usageLimit: discount.usageLimit === null || discount.usageLimit === undefined ? null : Number(discount.usageLimit),
+    isActive: discount.isActive !== false,
+    isPublic: discount.isPublic === true,
+    ...override,
+  })
 
   const fetchDiscounts = useCallback(async () => {
     setIsLoading(true)
@@ -86,6 +103,7 @@ export default function DiscountsPage() {
       endDate: discount.endDate ? new Date(discount.endDate).toISOString().slice(0, 10) : '',
       usageLimit: discount.usageLimit ?? '',
       isActive: discount.isActive !== false,
+      isPublic: discount.isPublic === true,
     })
     setIsModalOpen(true)
   }
@@ -109,13 +127,32 @@ export default function DiscountsPage() {
     }
 
     try {
+      let savedDiscount = null
+
       if (editingDiscount?._id) {
-        await updateDiscount(editingDiscount._id, payload)
+        const res = await updateDiscount(editingDiscount._id, payload)
+        savedDiscount = res?.data || null
         showToast('Cập nhật mã giảm giá thành công!')
       } else {
-        await createDiscount(payload)
+        const res = await createDiscount(payload)
+        savedDiscount = res?.data || null
         showToast('Tạo mã giảm giá thành công!')
       }
+
+      const targetId = savedDiscount?._id || editingDiscount?._id
+      if (targetId && typeof form.isPublic === 'boolean') {
+        try {
+          await setDiscountPublicStatus(targetId, Boolean(form.isPublic))
+        } catch (err) {
+          if (err.response?.status === 404) {
+            const fallbackPayload = buildUpdatePayload(savedDiscount || editingDiscount || {}, { isPublic: Boolean(form.isPublic) })
+            await updateDiscount(targetId, fallbackPayload)
+          } else {
+            showToast(err.response?.data?.message || 'Không thể cập nhật trạng thái public!', 'error')
+          }
+        }
+      }
+
       setIsModalOpen(false)
       setEditingDiscount(null)
       await fetchDiscounts()
@@ -134,6 +171,33 @@ export default function DiscountsPage() {
       setDiscounts((prev) => prev.filter((item) => item._id !== id))
     } catch (err) {
       showToast(err.response?.data?.message || 'Không thể xóa mã giảm giá!', 'error')
+    }
+  }
+
+  const handleTogglePublic = async (discount) => {
+    try {
+      const nextPublic = !(discount.isPublic === true)
+      await setDiscountPublicStatus(discount._id, nextPublic)
+      setDiscounts((prev) => prev.map((item) => (
+        item._id === discount._id ? { ...item, isPublic: nextPublic } : item
+      )))
+      showToast(nextPublic ? 'Đã đẩy mã ra public cho user săn.' : 'Đã thu hồi mã khỏi public.')
+    } catch (err) {
+      if (err.response?.status === 404) {
+        try {
+          const fallbackPayload = buildUpdatePayload(discount, { isPublic: !(discount.isPublic === true) })
+          await updateDiscount(discount._id, fallbackPayload)
+          const nextPublic = !(discount.isPublic === true)
+          setDiscounts((prev) => prev.map((item) => (
+            item._id === discount._id ? { ...item, isPublic: nextPublic } : item
+          )))
+          showToast(nextPublic ? 'Đã đẩy mã ra public cho user săn.' : 'Đã thu hồi mã khỏi public.')
+        } catch (fallbackErr) {
+          showToast(fallbackErr.response?.data?.message || 'Không thể cập nhật trạng thái public!', 'error')
+        }
+      } else {
+        showToast(err.response?.data?.message || 'Không thể cập nhật trạng thái public!', 'error')
+      }
     }
   }
 
@@ -243,6 +307,19 @@ export default function DiscountsPage() {
                   </div>
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="isPublic">Phát hành cho user săn sale</Label>
+                  <select
+                    id="isPublic"
+                    value={form.isPublic ? 'true' : 'false'}
+                    onChange={(e) => setForm((prev) => ({ ...prev, isPublic: e.target.value === 'true' }))}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="false">Chưa public</option>
+                    <option value="true">Đang public</option>
+                  </select>
+                </div>
+
                 <div className="pt-4 flex justify-end gap-2">
                   <Button type="button" variant="outline" onClick={() => setIsModalOpen(false)}>Hủy</Button>
                   <Button type="submit" disabled={isSaving}>{isSaving ? 'Đang lưu...' : 'Lưu'}</Button>
@@ -279,13 +356,14 @@ export default function DiscountsPage() {
                 <TableHead>Đơn tối thiểu</TableHead>
                 <TableHead>Hiệu lực</TableHead>
                 <TableHead>Trạng thái</TableHead>
+                <TableHead>Public</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {discounts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-10 text-slate-400">Chưa có mã giảm giá nào.</TableCell>
+                  <TableCell colSpan={8} className="text-center py-10 text-slate-400">Chưa có mã giảm giá nào.</TableCell>
                 </TableRow>
               ) : discounts.map((discount) => (
                 <TableRow key={discount._id}>
@@ -308,7 +386,20 @@ export default function DiscountsPage() {
                       {discount.isActive ? 'Hoạt động' : 'Tạm tắt'}
                     </span>
                   </TableCell>
+                  <TableCell>
+                    <span className={`text-xs px-2 py-1 rounded-full font-medium ${discount.isPublic ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {discount.isPublic ? 'Đang public' : 'Chưa public'}
+                    </span>
+                  </TableCell>
                   <TableCell className="text-right">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="mr-2"
+                      onClick={() => handleTogglePublic(discount)}
+                    >
+                      {discount.isPublic ? 'Thu hồi' : 'Đẩy public'}
+                    </Button>
                     <Button variant="ghost" size="icon" className="text-slate-500 hover:text-primary" onClick={() => openEditModal(discount)}>
                       <Edit className="h-4 w-4" />
                     </Button>
